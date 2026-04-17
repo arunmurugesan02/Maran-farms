@@ -1,10 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingCart, User, Leaf, Menu, X, ChevronDown } from 'lucide-react';
+import { ShoppingCart, User, Menu, X } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
+import logo from '@/images/logo.png';
+import { BRAND_NAME } from '@/lib/brand';
 
 const Navbar = () => {
   const { totalItems } = useCart();
@@ -33,12 +35,14 @@ const Navbar = () => {
     <header className={`sticky top-0 z-50 transition-all duration-300 ${scrolled ? 'glass shadow-md' : 'bg-background'}`}>
       <div className="container flex items-center justify-between h-16">
         <Link to="/" className="flex items-center gap-2 group">
-          <div className="h-9 w-9 rounded-xl farm-gradient flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Leaf className="h-5 w-5 text-primary-foreground" />
-          </div>
+          <img
+            src={logo}
+            alt={BRAND_NAME}
+            className="h-10 w-10 rounded-full object-cover border border-border/70 group-hover:scale-105 transition-transform"
+          />
           <div className="flex flex-col">
-            <span className="font-display text-lg font-bold text-foreground leading-tight tracking-wide">MARAN</span>
-            <span className="text-[10px] font-body font-semibold text-primary tracking-[0.2em] -mt-0.5">FARMS</span>
+            <span className="font-display text-sm md:text-base font-bold text-foreground leading-tight">{BRAND_NAME}</span>
+            <span className="text-[10px] font-body font-semibold text-primary tracking-[0.2em] -mt-0.5">KARUR</span>
           </div>
         </Link>
 

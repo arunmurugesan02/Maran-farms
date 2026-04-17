@@ -1,5 +1,7 @@
-import { Leaf, Phone, Mail, MapPin, ArrowUpRight, Globe, MessageCircle, Video } from 'lucide-react';
+import { Phone, Mail, MapPin, ArrowUpRight, Globe, MessageCircle, Video } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import logo from '@/images/logo.png';
+import { BRAND_EMAIL, BRAND_NAME } from '@/lib/brand';
 
 const Footer = () => (
   <footer className="bg-foreground text-background/80 mt-20">
@@ -26,12 +28,10 @@ const Footer = () => (
     <div className="container py-12 grid grid-cols-1 md:grid-cols-4 gap-10">
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <div className="h-9 w-9 rounded-xl farm-gradient flex items-center justify-center">
-            <Leaf className="h-5 w-5 text-primary-foreground" />
-          </div>
+          <img src={logo} alt={BRAND_NAME} className="h-10 w-10 rounded-full object-cover border border-background/20" />
           <div>
-            <p className="font-display text-base font-bold text-background leading-tight">MARAN</p>
-            <p className="text-[9px] font-bold tracking-[0.2em] text-primary -mt-0.5">FARMS</p>
+            <p className="font-display text-sm font-bold text-background leading-tight">{BRAND_NAME}</p>
+            <p className="text-[9px] font-bold tracking-[0.2em] text-primary -mt-0.5">KARUR</p>
           </div>
         </div>
         <p className="text-sm text-background/50 leading-relaxed mb-4">
@@ -88,7 +88,7 @@ const Footer = () => (
             <Phone className="h-4 w-4 text-primary" /> +91 98765 43210
           </p>
           <p className="flex items-center gap-2.5 text-sm text-background/50">
-            <Mail className="h-4 w-4 text-primary" /> info@maranfarms.com
+            <Mail className="h-4 w-4 text-primary" /> {BRAND_EMAIL}
           </p>
           <p className="flex items-start gap-2.5 text-sm text-background/50">
             <MapPin className="h-4 w-4 text-primary mt-0.5" /> Madurai, Tamil Nadu, India
@@ -98,7 +98,7 @@ const Footer = () => (
     </div>
 
     <div className="border-t border-background/10 py-5 text-center text-xs text-background/30">
-      © 2026 Maran Farms. All rights reserved. Built with 💚
+      © 2026 {BRAND_NAME}. All rights reserved. Built with love.
     </div>
   </footer>
 );

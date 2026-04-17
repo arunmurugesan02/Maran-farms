@@ -1,6 +1,7 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { HelpCircle, Truck, CreditCard, RefreshCw, Package, Sprout } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { BRAND_SHORT_NAME } from '@/lib/brand';
 
 const categories = [
   {
@@ -94,7 +95,7 @@ const FAQ = () => (
       <h3 className="text-xl font-display text-primary-foreground mb-2">Still have questions?</h3>
       <p className="text-primary-foreground/80 text-sm mb-5">Our team is just a WhatsApp message away.</p>
       <a
-        href="https://wa.me/919876543210?text=Hi%20Maran%20Farms%2C%20I%20have%20a%20question"
+        href={`https://wa.me/919876543210?text=${encodeURIComponent(`Hi ${BRAND_SHORT_NAME}, I have a question`)}`}
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex items-center gap-2 px-6 h-11 rounded-xl bg-background text-foreground font-semibold text-sm hover:scale-105 transition-transform"

@@ -8,6 +8,7 @@ import { Shield, ChevronRight, CreditCard, Smartphone, Building2 } from 'lucide-
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
 import { createCheckoutOrderApi, verifyPaymentApi } from '@/lib/api';
+import { BRAND_NAME } from '@/lib/brand';
 
 declare global {
   interface Window {
@@ -65,7 +66,7 @@ const Checkout = () => {
         key: razorpayKey,
         amount: checkout.amount,
         currency: checkout.currency,
-        name: 'Maran Farms',
+        name: BRAND_NAME,
         description: 'Order Payment',
         order_id: checkout.razorpayOrderId,
         prefill: {

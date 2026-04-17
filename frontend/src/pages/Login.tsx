@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Leaf, Mail, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
+import logo from '@/images/logo.png';
+import { BRAND_NAME } from '@/lib/brand';
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -52,13 +54,13 @@ const Login = () => {
             </div>
             <div className="relative z-10">
               <div className="h-14 w-14 rounded-2xl bg-primary-foreground/20 flex items-center justify-center mx-auto mb-4">
-                <Leaf className="h-7 w-7 text-primary-foreground" />
+                <img src={logo} alt={BRAND_NAME} className="h-12 w-12 rounded-full object-cover border border-primary-foreground/40" />
               </div>
               <h1 className="text-2xl font-display text-primary-foreground font-bold">
                 {isLogin ? 'Welcome Back' : 'Create Account'}
               </h1>
               <p className="text-sm text-primary-foreground/70 mt-1">
-                {isLogin ? 'Login to your Maran Farms account' : 'Join Maran Farms today'}
+                {isLogin ? `Login to your ${BRAND_NAME} account` : `Join ${BRAND_NAME} today`}
               </p>
             </div>
           </div>

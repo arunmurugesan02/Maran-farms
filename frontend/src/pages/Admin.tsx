@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import {
-  Plus, Pencil, Trash2, Leaf, Package, Users, BarChart3, Settings, LogOut,
+  Plus, Pencil, Trash2, Package, Users, BarChart3, Settings, LogOut,
   Image, Film, Search, Bell, TrendingUp, ShoppingCart, DollarSign, Eye,
   ArrowUpRight, ChevronRight, Filter, MoreVertical, X, Menu
 } from 'lucide-react';
@@ -12,6 +12,8 @@ import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createProductApi, deleteProductApi, getProductsApi, updateProductApi } from '@/lib/api';
 import { useEffect } from 'react';
+import logo from '@/images/logo.png';
+import { BRAND_NAME } from '@/lib/brand';
 
 const sidebarLinks = [
   { icon: BarChart3, label: 'Dashboard', key: 'dashboard' },
@@ -137,11 +139,9 @@ const Admin = () => {
       {/* Sidebar - Desktop */}
       <aside className="w-64 bg-card border-r border-border p-5 hidden md:flex flex-col">
         <div className="flex items-center gap-3 mb-8 pb-5 border-b border-border">
-          <div className="h-10 w-10 rounded-xl farm-gradient flex items-center justify-center">
-            <Leaf className="h-5 w-5 text-primary-foreground" />
-          </div>
+          <img src={logo} alt={BRAND_NAME} className="h-10 w-10 rounded-full object-cover border border-border" />
           <div>
-            <p className="font-display font-bold text-sm text-foreground">MARAN FARMS</p>
+            <p className="font-display font-bold text-sm text-foreground">{BRAND_NAME}</p>
             <p className="text-[10px] font-semibold text-primary tracking-wider">ADMIN PANEL</p>
           </div>
         </div>
@@ -179,9 +179,7 @@ const Admin = () => {
             <motion.aside initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} className="fixed left-0 top-0 bottom-0 w-64 bg-card border-r border-border p-5 z-50 md:hidden flex flex-col">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
-                  <div className="h-9 w-9 rounded-xl farm-gradient flex items-center justify-center">
-                    <Leaf className="h-5 w-5 text-primary-foreground" />
-                  </div>
+                  <img src={logo} alt={BRAND_NAME} className="h-9 w-9 rounded-full object-cover border border-border" />
                   <span className="font-display font-bold text-sm">ADMIN</span>
                 </div>
                 <button onClick={() => setSidebarOpen(false)}><X className="h-5 w-5" /></button>
@@ -602,7 +600,7 @@ const Admin = () => {
                 <h3 className="font-display font-bold text-foreground">Store Settings</h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   {[
-                    { label: 'Store Name', value: 'Maran Farms' },
+                    { label: 'Store Name', value: BRAND_NAME },
                     { label: 'Email', value: 'admin@maranfarms.com' },
                     { label: 'Phone', value: '+91 98765 43210' },
                     { label: 'Location', value: 'Madurai, Tamil Nadu' },

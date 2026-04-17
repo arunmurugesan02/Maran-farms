@@ -1,8 +1,9 @@
 import { MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { BRAND_NAME } from '@/lib/brand';
 
 const WHATSAPP_NUMBER = '919876543210'; // Update with real farm number
-const WHATSAPP_MSG = encodeURIComponent("Hi Maran Farms! I'd like to know more about your products.");
+const WHATSAPP_MSG = encodeURIComponent(`Hi ${BRAND_NAME}! I'd like to know more about your products.`);
 
 const WhatsAppButton = () => (
   <motion.a
