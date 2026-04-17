@@ -5,7 +5,7 @@ import { User } from "@/types";
 interface AuthContextType {
   user: User | null;
   requestOtp: (phone: string) => Promise<{ phone: string; expiresIn: number; otp?: string }>;
-  verifyOtp: (phone: string, otp: string, name?: string) => Promise<boolean>;
+  verifyOtp: (phone: string, otp: string, name?: string) => Promise<User>;
   logout: () => void;
   isAdmin: boolean;
   isAuthLoading: boolean;
@@ -47,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { token, user: registeredUser } = await verifyOtpApi({ phone, otp, name });
     setToken(token);
     setUser(registeredUser);
-    return true;
+    return registeredUser;
   }, []);
 
   const logout = useCallback(() => {

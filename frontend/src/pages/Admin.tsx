@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -33,8 +33,9 @@ const orderStatusTransitionMap = {
 } as const;
 
 const Admin = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user, logout, isAuthLoading } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"dashboard" | "products" | "orders">("dashboard");
   const [productForm, setProductForm] = useState({
     name: "",
@@ -144,7 +145,17 @@ const Admin = () => {
     return [...map.values()].sort((a, b) => b.revenue - a.revenue);
   }, [ordersQuery.data]);
 
-  if (!isAdmin) return <Navigate to="/login" />;
+  const handleLogout = () => {
+    logout();
+    toast({ title: "Logged out", description: "You have safely signed out from admin." });
+    navigate("/login", { replace: true, state: { from: { pathname: "/admin" } } });
+  };
+
+  if (isAuthLoading) {
+    return <div className="container py-10 text-sm text-muted-foreground">Checking admin access...</div>;
+  }
+
+  if (!isAdmin) return <Navigate to="/login" replace state={{ from: { pathname: "/admin" } }} />;
 
   const analytics = analyticsQuery.data;
   const products = productsQuery.data || [];
@@ -158,6 +169,19 @@ const Admin = () => {
 
   return (
     <div className="container py-8 space-y-6">
+      <div className="bg-card border border-border rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">Admin Console</p>
+          <h1 className="text-xl font-semibold text-foreground">Welcome, {user?.name || "Admin"}</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link to="/">
+            <Button variant="outline" size="sm">Back to store</Button>
+          </Link>
+          <Button variant="destructive" size="sm" onClick={handleLogout}>Logout</Button>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
         {(["dashboard", "products", "orders"] as const).map((tab) => (
           <Button key={tab} variant={activeTab === tab ? "default" : "outline"} onClick={() => setActiveTab(tab)}>

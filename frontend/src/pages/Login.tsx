@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Phone, KeyRound, User, ArrowRight } from "lucide-react";
@@ -15,9 +15,11 @@ const Login = () => {
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [expiresIn, setExpiresIn] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { requestOtp, verifyOtp } = useAuth();
+  const { requestOtp, verifyOtp, user, isAuthLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  const fromPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
 
   const sendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,9 +50,12 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      await verifyOtp(phone, otp, name || undefined);
+      const loggedInUser = await verifyOtp(phone, otp, name || undefined);
       toast({ title: "Login successful" });
-      navigate("/");
+      const targetPath = loggedInUser.isAdmin
+        ? (fromPath?.startsWith("/admin") ? fromPath : "/admin")
+        : (fromPath && !fromPath.startsWith("/admin") ? fromPath : "/");
+      navigate(targetPath, { replace: true });
     } catch (error) {
       toast({
         title: "OTP verification failed",
@@ -61,6 +66,17 @@ const Login = () => {
       setIsLoading(false);
     }
   };
+
+  if (isAuthLoading) {
+    return <div className="min-h-[75vh] flex items-center justify-center text-sm text-muted-foreground">Checking account...</div>;
+  }
+
+  if (user) {
+    const targetPath = user.isAdmin
+      ? (fromPath?.startsWith("/admin") ? fromPath : "/admin")
+      : (fromPath && !fromPath.startsWith("/admin") ? fromPath : "/");
+    return <Navigate to={targetPath} replace />;
+  }
 
   return (
     <div className="min-h-[75vh] flex items-center justify-center py-12 px-4">
