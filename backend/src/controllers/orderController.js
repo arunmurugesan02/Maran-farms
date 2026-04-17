@@ -420,6 +420,19 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
   if (!order) throw new ApiError(404, "Order not found");
 
+  if (parsed.data.orderStatus === order.orderStatus) {
+    if (parsed.data.paymentStatus && parsed.data.paymentStatus !== order.paymentStatus) {
+      order.paymentStatus = parsed.data.paymentStatus;
+      await order.save();
+    }
+
+    return res.json({
+      success: true,
+      message: `Order is already marked as ${order.orderStatus}`,
+      data: mapOrder(order)
+    });
+  }
+
   if (!transitionMap[order.orderStatus].includes(parsed.data.orderStatus)) {
     throw new ApiError(400, `Invalid status transition from ${order.orderStatus} to ${parsed.data.orderStatus}`);
   }

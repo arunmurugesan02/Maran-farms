@@ -24,6 +24,14 @@ import {
   YAxis
 } from "recharts";
 
+const orderStatusTransitionMap = {
+  pending: ["packed", "cancelled"],
+  packed: ["shipped"],
+  shipped: ["delivered"],
+  delivered: [],
+  cancelled: []
+} as const;
+
 const Admin = () => {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
@@ -106,6 +114,13 @@ const Admin = () => {
     onSuccess: async () => {
       await Promise.all([ordersQuery.refetch(), analyticsQuery.refetch()]);
       toast({ title: "Order status updated" });
+    },
+    onError: (error) => {
+      toast({
+        title: "Unable to update order status",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive"
+      });
     }
   });
 
@@ -274,17 +289,24 @@ const Admin = () => {
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
-                {(["packed", "shipped", "delivered", "cancelled"] as const).map((status) => (
-                  <Button
-                    key={status}
-                    variant="outline"
-                    size="sm"
-                    disabled={updateStatusMutation.isPending}
-                    onClick={() => updateStatusMutation.mutate({ id: order.id, status })}
-                  >
-                    Mark {status}
-                  </Button>
-                ))}
+                {(["packed", "shipped", "delivered", "cancelled"] as const).map((status) => {
+                  const allowedStatuses = orderStatusTransitionMap[order.orderStatus as keyof typeof orderStatusTransitionMap] || [];
+                  const isCurrent = order.orderStatus === status;
+                  const isAllowedTransition = allowedStatuses.includes(status);
+                  const isDisabled = updateStatusMutation.isPending || !isAllowedTransition;
+
+                  return (
+                    <Button
+                      key={status}
+                      variant={isCurrent ? "default" : "outline"}
+                      size="sm"
+                      disabled={isDisabled}
+                      onClick={() => updateStatusMutation.mutate({ id: order.id, status })}
+                    >
+                      {isCurrent ? "Current" : `Mark ${status}`}
+                    </Button>
+                  );
+                })}
               </div>
             </div>
           ))}
