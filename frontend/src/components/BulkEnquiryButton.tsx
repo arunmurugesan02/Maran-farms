@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { BRAND_WHATSAPP_NUMBER } from '@/lib/brand';
+import { createQuoteRequestApi, getToken } from '@/lib/api';
 
 const enquirySchema = z.object({
   name: z.string().trim().min(2, 'Name is required').max(100),
@@ -24,7 +25,7 @@ const BulkEnquiryButton = () => {
   const [form, setForm] = useState({ name: '', phone: '', product: '', quantity: '', notes: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const result = enquirySchema.safeParse(form);
     if (!result.success) {
@@ -34,6 +35,22 @@ const BulkEnquiryButton = () => {
       return;
     }
     setErrors({});
+    const token = getToken();
+
+    if (token && /^[a-f0-9]{24}$/i.test(form.product)) {
+      try {
+        await createQuoteRequestApi({
+          items: [{ productId: form.product, quantity: Number(form.quantity) || 1, note: form.notes || '' }],
+          contactName: form.name,
+          phone: form.phone,
+          message: form.notes
+        });
+        toast.success('Quote request submitted successfully.');
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Quote request failed');
+      }
+    }
+
     const msg = encodeURIComponent(
       `*Bulk Order Enquiry*\n\nName: ${form.name}\nPhone: ${form.phone}\nProduct: ${form.product}\nQuantity: ${form.quantity}\n${form.notes ? `Notes: ${form.notes}` : ''}`
     );

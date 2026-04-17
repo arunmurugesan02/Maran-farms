@@ -1,8 +1,10 @@
 import { Router } from "express";
 import {
+  createReview,
   createProduct,
   deleteProduct,
   getProductById,
+  listProductReviews,
   listProducts,
   updateProduct
 } from "../controllers/productController.js";
@@ -12,6 +14,8 @@ export const productRouter = Router();
 
 productRouter.get("/", listProducts);
 productRouter.get("/:id", getProductById);
+productRouter.get("/:id/reviews", listProductReviews);
+productRouter.post("/:id/reviews", requireAuth, createReview);
 productRouter.post("/", requireAuth, requireAdmin, createProduct);
 productRouter.patch("/:id", requireAuth, requireAdmin, updateProduct);
 productRouter.delete("/:id", requireAuth, requireAdmin, deleteProduct);

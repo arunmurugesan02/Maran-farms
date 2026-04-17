@@ -1,6 +1,18 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
+const addressSchema = new mongoose.Schema(
+  {
+    label: { type: String, trim: true, default: "Home" },
+    fullName: { type: String, trim: true, required: true },
+    phone: { type: String, trim: true, required: true },
+    address: { type: String, trim: true, required: true },
+    pincode: { type: String, trim: true, required: true },
+    isDefault: { type: Boolean, default: false }
+  },
+  { _id: true }
+);
+
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -16,7 +28,9 @@ const userSchema = new mongoose.Schema(
       set: (value) => (value == null || value === "" ? undefined : value)
     },
     password: { type: String, minlength: 6 },
-    isAdmin: { type: Boolean, default: false }
+    isAdmin: { type: Boolean, default: false },
+    pincode: { type: String, trim: true, default: "" },
+    addresses: { type: [addressSchema], default: [] }
   },
   { timestamps: true }
 );

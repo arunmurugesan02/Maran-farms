@@ -1,5 +1,14 @@
 import mongoose from "mongoose";
 
+const bulkPricingTierSchema = new mongoose.Schema(
+  {
+    minQty: { type: Number, required: true, min: 1 },
+    discountType: { type: String, enum: ["flat", "percent"], required: true },
+    discountValue: { type: Number, required: true, min: 0 }
+  },
+  { _id: false }
+);
+
 const productSchema = new mongoose.Schema(
   {
     legacyId: { type: String, unique: true, sparse: true },
@@ -15,7 +24,12 @@ const productSchema = new mongoose.Schema(
     videos: { type: [String], default: [] },
     age: { type: String },
     health: { type: String },
-    category: { type: String, required: true }
+    category: { type: String, required: true },
+    isActive: { type: Boolean, default: true },
+    lowStockThreshold: { type: Number, default: 10, min: 0 },
+    bulkPricingTiers: { type: [bulkPricingTierSchema], default: [] },
+    averageRating: { type: Number, default: 0, min: 0, max: 5 },
+    ratingsCount: { type: Number, default: 0, min: 0 }
   },
   { timestamps: true }
 );

@@ -1,13 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { clearToken, getMeApi, getToken, requestOtpApi, setToken, verifyOtpApi } from "@/lib/api";
-
-interface User {
-  id: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  isAdmin: boolean;
-}
+import { User } from "@/types";
 
 interface AuthContextType {
   user: User | null;

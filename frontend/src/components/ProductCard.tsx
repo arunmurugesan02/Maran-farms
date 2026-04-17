@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Product } from '@/types';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Eye, Truck, MapPin } from 'lucide-react';
+import { ShoppingCart, Eye, Truck, MapPin, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const ProductCard = ({ product, index = 0 }: { product: Product; index?: number }) => {
@@ -20,6 +20,7 @@ const ProductCard = ({ product, index = 0 }: { product: Product; index?: number 
           <img
             src={product.images[0]}
             alt={product.name}
+            loading="lazy"
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           />
         </div>
@@ -60,6 +61,12 @@ const ProductCard = ({ product, index = 0 }: { product: Product; index?: number 
               <MapPin className="h-3 w-3 text-muted-foreground" />
             )}
             <span className="text-xs text-muted-foreground capitalize">{product.deliveryType}</span>
+            {product.averageRating ? (
+              <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                <Star className="h-3 w-3 fill-current" />
+                {product.averageRating.toFixed(1)}
+              </span>
+            ) : null}
           </div>
         </div>
 

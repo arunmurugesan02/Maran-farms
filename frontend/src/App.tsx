@@ -14,6 +14,8 @@ import ProductDetail from "@/pages/ProductDetail";
 import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
 import Orders from "@/pages/Orders";
+import Wishlist from "@/pages/Wishlist";
+import Profile from "@/pages/Profile";
 import Login from "@/pages/Login";
 import Admin from "@/pages/Admin";
 import FAQ from "@/pages/FAQ";
@@ -44,6 +46,8 @@ const App = () => (
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/orders" element={<Orders />} />
+                  <Route path="/wishlist" element={<Wishlist />} />
+                  <Route path="/profile" element={<Profile />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/admin" element={<Admin />} />
                   <Route path="/faq" element={<FAQ />} />

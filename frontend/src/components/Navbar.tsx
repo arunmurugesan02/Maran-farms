@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingCart, User, Menu, X } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Heart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useState, useEffect } from 'react';
@@ -73,8 +73,14 @@ const Navbar = () => {
                   <Button variant="outline" size="sm" className="text-xs h-8">Admin</Button>
                 </Link>
               )}
-              <Link to="/orders">
+              <Link to="/wishlist">
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0"><Heart className="h-4 w-4" /></Button>
+              </Link>
+              <Link to="/profile">
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0"><User className="h-4 w-4" /></Button>
+              </Link>
+              <Link to="/orders">
+                <Button variant="ghost" size="sm" className="h-8 text-xs">Orders</Button>
               </Link>
               <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={logout}>Logout</Button>
             </div>
@@ -130,6 +136,8 @@ const Navbar = () => {
               ))}
               {user ? (
                 <>
+                  <Link to="/profile" className="block px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>My Profile</Link>
+                  <Link to="/wishlist" className="block px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>Wishlist</Link>
                   <Link to="/orders" className="block px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>My Orders</Link>
                   {user.isAdmin && <Link to="/admin" className="block px-3 py-2.5 rounded-lg text-sm font-medium text-primary" onClick={() => setMobileOpen(false)}>Admin Dashboard</Link>}
                   <button onClick={() => { logout(); setMobileOpen(false); }} className="block w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-destructive">Logout</button>

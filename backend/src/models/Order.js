@@ -17,12 +17,16 @@ const orderItemSchema = new mongoose.Schema(
 
 const orderSchema = new mongoose.Schema(
   {
+    orderNumber: { type: String, required: true, unique: true },
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     items: { type: [orderItemSchema], required: true },
     subtotal: { type: Number, required: true },
+    discountAmount: { type: Number, required: true, default: 0 },
+    savingsAmount: { type: Number, required: true, default: 0 },
     deliveryCharge: { type: Number, required: true, default: 0 },
     totalAmount: { type: Number, required: true },
     deliveryType: { type: String, enum: ["delivery", "pickup"], required: true },
+    deliverySlot: { type: String, enum: ["morning", "evening"], default: "morning" },
     paymentStatus: {
       type: String,
       enum: ["pending", "paid", "failed"],
@@ -30,8 +34,42 @@ const orderSchema = new mongoose.Schema(
     },
     orderStatus: {
       type: String,
-      enum: ["pending", "confirmed", "shipped", "delivered"],
+      enum: ["pending", "packed", "shipped", "delivered", "cancelled"],
       default: "pending"
+    },
+    statusTimeline: {
+      type: [
+        {
+          status: {
+            type: String,
+            enum: ["pending", "packed", "shipped", "delivered", "cancelled"],
+            required: true
+          },
+          note: { type: String, default: "" },
+          updatedAt: { type: Date, default: Date.now }
+        }
+      ],
+      default: [{ status: "pending", note: "Order created" }]
+    },
+    tracking: {
+      trackingId: { type: String, default: "" },
+      milestones: {
+        type: [
+          {
+            label: { type: String, required: true },
+            timestamp: { type: Date, default: Date.now }
+          }
+        ],
+        default: []
+      }
+    },
+    pricingSnapshot: {
+      couponCode: { type: String, default: "" },
+      subtotal: { type: Number, required: true },
+      discountAmount: { type: Number, required: true, default: 0 },
+      savingsAmount: { type: Number, required: true, default: 0 },
+      deliveryCharge: { type: Number, required: true, default: 0 },
+      totalAmount: { type: Number, required: true }
     },
     deliveryDetails: {
       fullName: { type: String, required: true },
@@ -39,9 +77,18 @@ const orderSchema = new mongoose.Schema(
       address: { type: String, required: true },
       pincode: { type: String, required: true }
     },
+    cancellation: {
+      cancelledAt: { type: Date },
+      reason: { type: String, default: "" }
+    },
+    invoice: {
+      invoiceNumber: { type: String, default: "" },
+      generatedAt: { type: Date }
+    },
     razorpayOrderId: { type: String },
     razorpayPaymentId: { type: String },
-    razorpaySignature: { type: String }
+    razorpaySignature: { type: String },
+    idempotencyKey: { type: String, default: "" }
   },
   { timestamps: true }
 );

@@ -25,6 +25,17 @@ const verifyOtpSchema = z.object({
   otp: z.string().trim().regex(/^\d{6}$/),
   name: z.string().trim().min(2).max(80).optional()
 });
+const updateProfileSchema = z.object({
+  name: z.string().trim().min(2).max(80).optional(),
+  pincode: z.string().trim().min(4).max(10).optional()
+});
+const addressSchema = z.object({
+  label: z.string().trim().min(1).max(30).optional(),
+  fullName: z.string().trim().min(2),
+  phone: z.string().trim().min(8),
+  address: z.string().trim().min(8),
+  pincode: z.string().trim().min(4)
+});
 
 const OTP_EXPIRY_MS = 5 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 30 * 1000;
@@ -48,6 +59,8 @@ function responseUser(user) {
     name: user.name,
     email: user.email,
     phone: user.phone,
+    pincode: user.pincode || "",
+    addresses: user.addresses || [],
     isAdmin: user.isAdmin
   };
 }
@@ -100,6 +113,72 @@ export const me = asyncHandler(async (req, res) => {
     success: true,
     data: { user: responseUser(req.user) }
   });
+});
+
+export const updateProfile = asyncHandler(async (req, res) => {
+  const parsed = updateProfileSchema.safeParse(req.body);
+  if (!parsed.success) throw new ApiError(400, parsed.error.issues[0].message);
+
+  Object.assign(req.user, parsed.data);
+  await req.user.save();
+
+  res.json({
+    success: true,
+    data: { user: responseUser(req.user) }
+  });
+});
+
+export const addAddress = asyncHandler(async (req, res) => {
+  const parsed = addressSchema.safeParse(req.body);
+  if (!parsed.success) throw new ApiError(400, parsed.error.issues[0].message);
+
+  const shouldBeDefault = req.user.addresses.length === 0;
+  if (shouldBeDefault) {
+    req.user.addresses = req.user.addresses.map((item) => ({ ...item, isDefault: false }));
+  }
+  req.user.addresses.push({ ...parsed.data, isDefault: shouldBeDefault });
+  await req.user.save();
+
+  res.status(201).json({ success: true, data: { addresses: req.user.addresses } });
+});
+
+export const updateAddress = asyncHandler(async (req, res) => {
+  const parsed = addressSchema.partial().safeParse(req.body);
+  if (!parsed.success) throw new ApiError(400, parsed.error.issues[0].message);
+
+  const address = req.user.addresses.id(req.params.addressId);
+  if (!address) throw new ApiError(404, "Address not found");
+
+  Object.assign(address, parsed.data);
+  await req.user.save();
+
+  res.json({ success: true, data: { addresses: req.user.addresses } });
+});
+
+export const setDefaultAddress = asyncHandler(async (req, res) => {
+  const address = req.user.addresses.id(req.params.addressId);
+  if (!address) throw new ApiError(404, "Address not found");
+
+  req.user.addresses.forEach((item) => {
+    item.isDefault = item._id.toString() === req.params.addressId;
+  });
+  await req.user.save();
+
+  res.json({ success: true, data: { addresses: req.user.addresses } });
+});
+
+export const deleteAddress = asyncHandler(async (req, res) => {
+  const address = req.user.addresses.id(req.params.addressId);
+  if (!address) throw new ApiError(404, "Address not found");
+  const wasDefault = address.isDefault;
+
+  address.deleteOne();
+  if (wasDefault && req.user.addresses.length > 0) {
+    req.user.addresses[0].isDefault = true;
+  }
+  await req.user.save();
+
+  res.json({ success: true, data: { addresses: req.user.addresses } });
 });
 
 export const requestOtp = asyncHandler(async (req, res) => {

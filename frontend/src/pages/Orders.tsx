@@ -1,36 +1,107 @@
-import { useOrders } from '@/context/OrderContext';
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Package, ShoppingBag, ChevronRight, CheckCircle2, Clock, Truck as TruckIcon } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { useAuth } from '@/context/AuthContext';
-import { useEffect } from 'react';
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import {
+  Package,
+  ShoppingBag,
+  CheckCircle2,
+  Clock,
+  Truck as TruckIcon,
+  XCircle,
+  FileDown,
+  RotateCw
+} from "lucide-react";
+import { motion } from "framer-motion";
+import { useAuth } from "@/context/AuthContext";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { cancelOrderApi, downloadInvoiceApi, getMyOrdersApi, reorderApi } from "@/lib/api";
+import { useCart } from "@/context/CartContext";
+import { useToast } from "@/hooks/use-toast";
 
 const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
-  pending: { color: 'bg-farm-gold/15 text-farm-brown border-farm-gold/30', icon: Clock, label: 'Pending' },
-  confirmed: { color: 'bg-accent text-primary border-primary/20', icon: CheckCircle2, label: 'Confirmed' },
-  shipped: { color: 'bg-secondary text-secondary-foreground border-secondary', icon: TruckIcon, label: 'Shipped' },
-  delivered: { color: 'bg-primary/10 text-primary border-primary/20', icon: Package, label: 'Delivered' },
+  pending: { color: "bg-farm-gold/15 text-farm-brown border-farm-gold/30", icon: Clock, label: "Pending" },
+  packed: { color: "bg-accent text-primary border-primary/20", icon: Package, label: "Packed" },
+  shipped: { color: "bg-secondary text-secondary-foreground border-secondary", icon: TruckIcon, label: "Shipped" },
+  delivered: { color: "bg-primary/10 text-primary border-primary/20", icon: CheckCircle2, label: "Delivered" },
+  cancelled: { color: "bg-destructive/10 text-destructive border-destructive/20", icon: XCircle, label: "Cancelled" }
 };
 
-const Orders = () => {
-  const { orders, fetchOrders, isOrdersLoading } = useOrders();
-  const { user } = useAuth();
+const steps = ["pending", "packed", "shipped", "delivered"];
 
-  useEffect(() => {
-    if (user) fetchOrders();
-  }, [user, fetchOrders]);
+const Orders = () => {
+  const { user } = useAuth();
+  const { addToCart } = useCart();
+  const { toast } = useToast();
+
+  const {
+    data: orders = [],
+    isLoading,
+    refetch
+  } = useQuery({
+    queryKey: ["my-orders"],
+    queryFn: getMyOrdersApi,
+    enabled: Boolean(user),
+    refetchInterval: () => (document.visibilityState === "visible" ? 8_000 : false)
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (orderId: string) => cancelOrderApi(orderId),
+    onSuccess: () => {
+      refetch();
+      toast({ title: "Order cancelled" });
+    },
+    onError: (error) => {
+      toast({
+        title: "Cancellation failed",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const reorderMutation = useMutation({
+    mutationFn: (orderId: string) => reorderApi(orderId),
+    onSuccess: ({ items }) => {
+      const matchedOrder = orders.find((order) =>
+        order.items.length === items.length &&
+        order.items.every((orderItem) => items.some((i) => i.productId === orderItem.product.id))
+      );
+      if (matchedOrder) {
+        matchedOrder.items.forEach((item) => addToCart(item.product, item.quantity));
+      }
+      toast({ title: "Items added to cart" });
+    }
+  });
+
+  const downloadInvoice = async (orderId: string, orderNumber?: string) => {
+    try {
+      const blob = await downloadInvoiceApi(orderId);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${orderNumber || orderId}-invoice.pdf`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast({
+        title: "Invoice unavailable",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive"
+      });
+    }
+  };
 
   if (!user) {
     return (
       <div className="container py-24 text-center">
         <h2 className="text-2xl font-display text-foreground mb-3">Please login to view your orders</h2>
-        <Link to="/login"><Button className="rounded-xl h-11 px-8">Login</Button></Link>
+        <Link to="/login">
+          <Button className="rounded-xl h-11 px-8">Login</Button>
+        </Link>
       </div>
     );
   }
 
-  if (isOrdersLoading) {
+  if (isLoading) {
     return (
       <div className="container py-24 text-center">
         <p className="text-muted-foreground">Loading your orders...</p>
@@ -46,22 +117,26 @@ const Orders = () => {
             <ShoppingBag className="h-10 w-10 text-muted-foreground" />
           </div>
           <h2 className="text-2xl font-display text-foreground mb-2">No orders yet</h2>
-          <p className="text-muted-foreground mb-8 max-w-sm mx-auto">Start shopping to place your first order!</p>
-          <Link to="/shop"><Button className="rounded-xl h-11 px-8">Shop Now</Button></Link>
+          <p className="text-muted-foreground mb-8 max-w-sm mx-auto">Start shopping to place your first order.</p>
+          <Link to="/shop">
+            <Button className="rounded-xl h-11 px-8">Shop Now</Button>
+          </Link>
         </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="container py-8 max-w-3xl">
+    <div className="container py-8 max-w-4xl">
       <h1 className="text-3xl font-display text-foreground mb-2">My Orders</h1>
-      <p className="text-muted-foreground text-sm mb-8">{orders.length} order{orders.length > 1 ? 's' : ''}</p>
+      <p className="text-muted-foreground text-sm mb-8">{orders.length} order{orders.length > 1 ? "s" : ""}</p>
 
       <div className="space-y-4">
         {orders.map((order, i) => {
           const status = statusConfig[order.orderStatus] || statusConfig.pending;
           const StatusIcon = status.icon;
+          const currentIdx = steps.indexOf(order.orderStatus);
+
           return (
             <motion.div
               key={order.id}
@@ -73,10 +148,17 @@ const Orders = () => {
               <div className="p-5">
                 <div className="flex flex-wrap justify-between items-start gap-3 mb-4">
                   <div>
-                    <p className="text-xs text-muted-foreground font-mono">{order.id}</p>
+                    <p className="text-xs text-muted-foreground font-mono">{order.orderNumber || order.id}</p>
                     <p className="text-sm text-muted-foreground mt-0.5">
-                      {new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {new Date(order.createdAt).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric"
+                      })}
                     </p>
+                    {order.deliverySlot ? (
+                      <p className="text-xs text-muted-foreground mt-1">Delivery slot: {order.deliverySlot}</p>
+                    ) : null}
                   </div>
                   <div className="flex items-center gap-3">
                     <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${status.color}`}>
@@ -87,22 +169,19 @@ const Orders = () => {
                   </div>
                 </div>
 
-                {/* Order progress */}
-                <div className="flex items-center gap-1 mb-5">
-                  {['pending', 'confirmed', 'shipped', 'delivered'].map((s, idx) => {
-                    const steps = ['pending', 'confirmed', 'shipped', 'delivered'];
-                    const currentIdx = steps.indexOf(order.orderStatus);
-                    const isCompleted = idx <= currentIdx;
-                    return (
-                      <div key={s} className={`flex-1 h-1.5 rounded-full ${isCompleted ? 'bg-primary' : 'bg-border'}`} />
-                    );
-                  })}
-                </div>
+                {order.orderStatus !== "cancelled" ? (
+                  <div className="flex items-center gap-1 mb-5">
+                    {steps.map((step, idx) => {
+                      const isCompleted = currentIdx >= 0 && idx <= currentIdx;
+                      return <div key={step} className={`flex-1 h-1.5 rounded-full ${isCompleted ? "bg-primary" : "bg-border"}`} />;
+                    })}
+                  </div>
+                ) : null}
 
                 <div className="space-y-2">
-                  {order.items.map(item => (
+                  {order.items.map((item) => (
                     <div key={item.product.id} className="flex items-center gap-3">
-                      <img src={item.product.images[0]} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                      <img src={item.product.images[0]} alt="" loading="lazy" className="w-10 h-10 rounded-lg object-cover" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{item.product.name}</p>
                         <p className="text-xs text-muted-foreground">× {item.quantity}</p>
@@ -110,6 +189,48 @@ const Orders = () => {
                       <p className="text-sm font-medium text-foreground">₹{(item.product.price * item.quantity).toFixed(2)}</p>
                     </div>
                   ))}
+                </div>
+
+                {order.tracking?.milestones?.length ? (
+                  <div className="mt-4 border-t border-border pt-3">
+                    <p className="text-xs font-semibold text-foreground mb-2">Tracking Timeline</p>
+                    <div className="space-y-1">
+                      {order.tracking.milestones.map((milestone, idx) => (
+                        <p key={`${milestone.label}-${idx}`} className="text-xs text-muted-foreground">
+                          {milestone.label} • {new Date(milestone.timestamp).toLocaleString("en-IN")}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {order.orderStatus === "pending" ? (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => cancelMutation.mutate(order.id)}
+                      disabled={cancelMutation.isPending}
+                    >
+                      Cancel Order
+                    </Button>
+                  ) : null}
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1"
+                    onClick={() => reorderMutation.mutate(order.id)}
+                    disabled={reorderMutation.isPending}
+                  >
+                    <RotateCw className="h-3.5 w-3.5" /> Re-order
+                  </Button>
+
+                  {order.paymentStatus === "paid" ? (
+                    <Button size="sm" variant="outline" className="gap-1" onClick={() => downloadInvoice(order.id, order.orderNumber)}>
+                      <FileDown className="h-3.5 w-3.5" /> Invoice
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             </motion.div>
