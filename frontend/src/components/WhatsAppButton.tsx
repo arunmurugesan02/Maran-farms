@@ -1,13 +1,12 @@
 import { MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { BRAND_NAME } from '@/lib/brand';
+import { BRAND_NAME, BRAND_OWNER_NAME, BRAND_WHATSAPP_NUMBER } from '@/lib/brand';
 
-const WHATSAPP_NUMBER = '919876543210'; // Update with real farm number
-const WHATSAPP_MSG = encodeURIComponent(`Hi ${BRAND_NAME}! I'd like to know more about your products.`);
+const WHATSAPP_MSG = encodeURIComponent(`Hi ${BRAND_OWNER_NAME}, I'd like to know more about ${BRAND_NAME} products.`);
 
 const WhatsAppButton = () => (
   <motion.a
-    href={`https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_MSG}`}
+    href={`https://wa.me/${BRAND_WHATSAPP_NUMBER}?text=${WHATSAPP_MSG}`}
     target="_blank"
     rel="noopener noreferrer"
     initial={{ scale: 0, opacity: 0 }}
@@ -21,7 +20,7 @@ const WhatsAppButton = () => (
     <span className="absolute inset-0 rounded-full bg-[#25D366] animate-ping opacity-30" />
     <MessageCircle className="h-7 w-7 text-white relative z-10 fill-white" strokeWidth={1.5} />
     <span className="absolute right-full mr-3 px-3 py-1.5 rounded-lg bg-foreground text-background text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-      Chat with us
+      Chat with {BRAND_OWNER_NAME}
     </span>
   </motion.a>
 );

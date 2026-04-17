@@ -1,7 +1,7 @@
 import { Phone, Mail, MapPin, ArrowUpRight, Globe, MessageCircle, Video } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import logo from '@/images/logo.png';
-import { BRAND_EMAIL, BRAND_NAME } from '@/lib/brand';
+import { BRAND_EMAIL, BRAND_NAME, BRAND_OWNER_NAME, BRAND_PHONE_DISPLAY } from '@/lib/brand';
 
 const Footer = () => (
   <footer className="bg-foreground text-background/80 mt-20">
@@ -85,8 +85,9 @@ const Footer = () => (
         <h4 className="font-display font-bold text-background mb-4 text-sm">Contact Us</h4>
         <div className="space-y-3">
           <p className="flex items-center gap-2.5 text-sm text-background/50">
-            <Phone className="h-4 w-4 text-primary" /> +91 98765 43210
+            <Phone className="h-4 w-4 text-primary" /> {BRAND_PHONE_DISPLAY}
           </p>
+          <p className="text-sm text-background/50">Owner: {BRAND_OWNER_NAME}</p>
           <p className="flex items-center gap-2.5 text-sm text-background/50">
             <Mail className="h-4 w-4 text-primary" /> {BRAND_EMAIL}
           </p>

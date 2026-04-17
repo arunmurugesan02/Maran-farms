@@ -21,6 +21,7 @@ import Compare from "@/pages/Compare";
 import NotFound from "./pages/NotFound";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import BulkEnquiryButton from "@/components/BulkEnquiryButton";
+import ScrollToTop from "@/components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <ScrollToTop />
               <Navbar />
               <main className="min-h-[60vh]">
                 <Routes>

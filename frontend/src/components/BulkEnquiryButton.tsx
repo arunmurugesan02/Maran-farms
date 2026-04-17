@@ -9,8 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { z } from 'zod';
-
-const WHATSAPP_NUMBER = '919876543210';
+import { BRAND_WHATSAPP_NUMBER } from '@/lib/brand';
 
 const enquirySchema = z.object({
   name: z.string().trim().min(2, 'Name is required').max(100),
@@ -38,7 +37,7 @@ const BulkEnquiryButton = () => {
     const msg = encodeURIComponent(
       `*Bulk Order Enquiry*\n\nName: ${form.name}\nPhone: ${form.phone}\nProduct: ${form.product}\nQuantity: ${form.quantity}\n${form.notes ? `Notes: ${form.notes}` : ''}`
     );
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
+    window.open(`https://wa.me/${BRAND_WHATSAPP_NUMBER}?text=${msg}`, '_blank');
     toast.success('Opening WhatsApp to send your enquiry...');
     setOpen(false);
     setForm({ name: '', phone: '', product: '', quantity: '', notes: '' });

@@ -35,6 +35,26 @@ type RawOrder = {
   deliveryDetails?: Order["deliveryDetails"];
 };
 
+type RawAdminOrder = RawOrder & {
+  user?:
+    | string
+    | {
+      _id: string;
+      name?: string;
+      email?: string;
+      phone?: string;
+    };
+};
+
+export type AdminOrder = Order & {
+  user?: {
+    id: string;
+    name?: string;
+    email?: string;
+    phone?: string;
+  };
+};
+
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -104,6 +124,24 @@ function mapOrder(order: RawOrder): Order {
   };
 }
 
+function mapAdminOrder(order: RawAdminOrder): AdminOrder {
+  const mappedOrder = mapOrder(order);
+  const user =
+    order.user && typeof order.user === "object"
+      ? {
+        id: order.user._id,
+        name: order.user.name,
+        email: order.user.email,
+        phone: order.user.phone
+      }
+      : undefined;
+
+  return {
+    ...mappedOrder,
+    user
+  };
+}
+
 export async function registerApi(input: {
   name: string;
   email: string;
@@ -118,6 +156,22 @@ export async function registerApi(input: {
 
 export async function loginApi(input: { email: string; password: string }) {
   const result = await request<ApiEnvelope<{ token: string; user: any }>>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+  return result.data;
+}
+
+export async function requestOtpApi(input: { phone: string }) {
+  const result = await request<ApiEnvelope<{ phone: string; expiresIn: number; otp?: string }>>("/auth/request-otp", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+  return result.data;
+}
+
+export async function verifyOtpApi(input: { phone: string; otp: string; name?: string }) {
+  const result = await request<ApiEnvelope<{ token: string; user: any }>>("/auth/verify-otp", {
     method: "POST",
     body: JSON.stringify(input)
   });
@@ -142,6 +196,11 @@ export async function getProductByIdApi(id: string) {
 export async function getMyOrdersApi() {
   const result = await request<ApiEnvelope<RawOrder[]>>("/orders/my");
   return result.data.map(mapOrder);
+}
+
+export async function getAllOrdersApi() {
+  const result = await request<ApiEnvelope<RawAdminOrder[]>>("/orders");
+  return result.data.map(mapAdminOrder);
 }
 
 export async function createCheckoutOrderApi(payload: {

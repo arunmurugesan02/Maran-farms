@@ -8,7 +8,7 @@ import { Shield, ChevronRight, CreditCard, Smartphone, Building2 } from 'lucide-
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
 import { createCheckoutOrderApi, verifyPaymentApi } from '@/lib/api';
-import { BRAND_NAME } from '@/lib/brand';
+import { BRAND_NAME, BRAND_PHONE_DISPLAY } from '@/lib/brand';
 
 declare global {
   interface Window {
@@ -142,7 +142,7 @@ const Checkout = () => {
             <div className="grid md:grid-cols-2 gap-4">
               {[
                 { key: 'fullName', label: 'Full Name', type: 'text', placeholder: 'Karthick M' },
-                { key: 'phone', label: 'Phone Number', type: 'tel', placeholder: '+91 98765 43210' },
+                { key: 'phone', label: 'Phone Number', type: 'tel', placeholder: BRAND_PHONE_DISPLAY },
               ].map(f => (
                 <div key={f.key}>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">{f.label}</label>

@@ -1,19 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import {
   Plus, Pencil, Trash2, Package, Users, BarChart3, Settings, LogOut,
-  Image, Film, Search, Bell, TrendingUp, ShoppingCart, DollarSign, Eye,
-  ArrowUpRight, ChevronRight, Filter, MoreVertical, X, Menu
+  Image, Bell, TrendingUp, ShoppingCart, DollarSign, Eye,
+  ChevronRight, X, Menu
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createProductApi, deleteProductApi, getProductsApi, updateProductApi } from '@/lib/api';
-import { useEffect } from 'react';
+import { AdminOrder, createProductApi, deleteProductApi, getAllOrdersApi, getProductsApi, updateProductApi } from '@/lib/api';
 import logo from '@/images/logo.png';
-import { BRAND_NAME } from '@/lib/brand';
+import { BRAND_NAME, BRAND_PHONE_DISPLAY } from '@/lib/brand';
 
 const sidebarLinks = [
   { icon: BarChart3, label: 'Dashboard', key: 'dashboard' },
@@ -24,22 +23,6 @@ const sidebarLinks = [
   { icon: Settings, label: 'Settings', key: 'settings' },
 ];
 
-const mockOrders = [
-  { id: 'ORD-001', customer: 'Karthick M', email: 'karthick@gmail.com', items: 3, total: 1250, status: 'delivered', date: '2026-04-14' },
-  { id: 'ORD-002', customer: 'Priya S', email: 'priya@gmail.com', items: 1, total: 500, status: 'shipped', date: '2026-04-13' },
-  { id: 'ORD-003', customer: 'Rajan K', email: 'rajan@gmail.com', items: 5, total: 3200, status: 'confirmed', date: '2026-04-12' },
-  { id: 'ORD-004', customer: 'Anitha R', email: 'anitha@gmail.com', items: 2, total: 750, status: 'pending', date: '2026-04-11' },
-  { id: 'ORD-005', customer: 'Suresh B', email: 'suresh@gmail.com', items: 4, total: 2100, status: 'delivered', date: '2026-04-10' },
-];
-
-const mockCustomers = [
-  { name: 'Karthick M', email: 'karthick@gmail.com', orders: 5, spent: 4500, joined: '2026-01-15' },
-  { name: 'Priya S', email: 'priya@gmail.com', orders: 3, spent: 1500, joined: '2026-02-20' },
-  { name: 'Rajan K', email: 'rajan@gmail.com', orders: 8, spent: 8200, joined: '2025-11-10' },
-  { name: 'Anitha R', email: 'anitha@gmail.com', orders: 2, spent: 750, joined: '2026-03-01' },
-  { name: 'Suresh B', email: 'suresh@gmail.com', orders: 6, spent: 5600, joined: '2025-12-05' },
-];
-
 const statusColors: Record<string, string> = {
   pending: 'bg-farm-gold/15 text-farm-brown',
   confirmed: 'bg-accent text-primary',
@@ -47,11 +30,29 @@ const statusColors: Record<string, string> = {
   delivered: 'bg-primary/10 text-primary',
 };
 
+const ORDER_STATUSES = ['all', 'pending', 'confirmed', 'shipped', 'delivered'] as const;
+type OrderFilter = typeof ORDER_STATUSES[number];
+
+function formatCurrency(value: number) {
+  return `₹${value.toLocaleString('en-IN')}`;
+}
+
+function formatDate(input: string) {
+  return new Date(input).toLocaleDateString('en-IN', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+  });
+}
+
 const Admin = () => {
   const { isAdmin, logout } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [productsList, setProductsList] = useState<Product[]>([]);
+  const [ordersList, setOrdersList] = useState<AdminOrder[]>([]);
+  const [orderFilter, setOrderFilter] = useState<OrderFilter>('all');
+  const [isLoadingAdminData, setIsLoadingAdminData] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -63,12 +64,72 @@ const Admin = () => {
   if (!isAdmin) return <Navigate to="/login" />;
 
   useEffect(() => {
-    async function loadProducts() {
-      const products = await getProductsApi();
-      setProductsList(products);
+    let mounted = true;
+    async function loadAdminData() {
+      try {
+        const [products, orders] = await Promise.all([
+          getProductsApi(),
+          getAllOrdersApi(),
+        ]);
+        if (!mounted) return;
+        setProductsList(products);
+        setOrdersList(orders);
+      } catch (error) {
+        if (!mounted) return;
+        toast({
+          title: 'Failed to load admin data',
+          description: error instanceof Error ? error.message : 'Please refresh and try again',
+          variant: 'destructive',
+        });
+      } finally {
+        if (mounted) setIsLoadingAdminData(false);
+      }
     }
-    loadProducts();
-  }, []);
+    loadAdminData();
+    return () => {
+      mounted = false;
+    };
+  }, [toast]);
+
+  const filteredOrders = useMemo(
+    () => (orderFilter === 'all' ? ordersList : ordersList.filter((o) => o.orderStatus === orderFilter)),
+    [orderFilter, ordersList]
+  );
+
+  const totalRevenue = useMemo(
+    () => ordersList.reduce((sum, order) => sum + order.totalAmount, 0),
+    [ordersList]
+  );
+
+  const customersList = useMemo(() => {
+    const map = new Map<string, { name: string; email: string; orders: number; spent: number; joined: string }>();
+    for (const order of ordersList) {
+      const name = order.user?.name || order.deliveryDetails?.fullName || 'Customer';
+      const email = order.user?.email || order.deliveryDetails?.phone || '-';
+      const key = order.user?.id || email || name;
+      const existing = map.get(key);
+
+      if (!existing) {
+        map.set(key, {
+          name,
+          email,
+          orders: 1,
+          spent: order.totalAmount,
+          joined: order.createdAt,
+        });
+        continue;
+      }
+
+      existing.orders += 1;
+      existing.spent += order.totalAmount;
+      if (new Date(order.createdAt) < new Date(existing.joined)) {
+        existing.joined = order.createdAt;
+      }
+      map.set(key, existing);
+    }
+
+    return Array.from(map.values()).sort((a, b) => b.spent - a.spent);
+  }, [ordersList]);
 
   const handleSave = async () => {
     if (!form.name || !form.price) {
@@ -128,14 +189,14 @@ const Admin = () => {
   };
 
   const dashboardStats = [
-    { label: 'Total Revenue', value: '₹24,500', change: '+12.5%', icon: DollarSign, color: 'bg-primary/10 text-primary' },
-    { label: 'Total Orders', value: '156', change: '+8.2%', icon: ShoppingCart, color: 'bg-farm-gold/15 text-farm-brown' },
-    { label: 'Total Products', value: String(productsList.length), change: '+2', icon: Package, color: 'bg-accent text-primary' },
-    { label: 'Total Customers', value: '89', change: '+15.3%', icon: Users, color: 'bg-secondary text-secondary-foreground' },
+    { label: 'Total Revenue', value: formatCurrency(totalRevenue), change: 'Live', icon: DollarSign, color: 'bg-primary/10 text-primary' },
+    { label: 'Total Orders', value: String(ordersList.length), change: 'Live', icon: ShoppingCart, color: 'bg-farm-gold/15 text-farm-brown' },
+    { label: 'Total Products', value: String(productsList.length), change: 'Live', icon: Package, color: 'bg-accent text-primary' },
+    { label: 'Total Customers', value: String(customersList.length), change: 'Live', icon: Users, color: 'bg-secondary text-secondary-foreground' },
   ];
 
   return (
-    <div className="flex min-h-[calc(100vh-64px)]">
+    <div className="flex min-h-screen">
       {/* Sidebar - Desktop */}
       <aside className="w-64 bg-card border-r border-border p-5 hidden md:flex flex-col">
         <div className="flex items-center gap-3 mb-8 pb-5 border-b border-border">
@@ -209,7 +270,7 @@ const Admin = () => {
       {/* Content */}
       <main className="flex-1 bg-muted/30">
         {/* Top bar */}
-        <div className="sticky top-16 z-30 bg-card/80 backdrop-blur-xl border-b border-border px-6 py-3 flex items-center justify-between">
+        <div className="sticky top-0 z-30 bg-card/80 backdrop-blur-xl border-b border-border px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button className="md:hidden" onClick={() => setSidebarOpen(true)}>
               <Menu className="h-5 w-5" />
@@ -275,20 +336,25 @@ const Admin = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {mockOrders.slice(0, 5).map((o) => (
+                      {ordersList.slice(0, 5).map((o) => (
                         <tr key={o.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                          <td className="p-3 font-mono text-xs text-foreground">{o.id}</td>
+                          <td className="p-3 font-mono text-xs text-foreground">{o.id.slice(-8).toUpperCase()}</td>
                           <td className="p-3">
-                            <p className="font-medium text-foreground text-xs">{o.customer}</p>
-                            <p className="text-[10px] text-muted-foreground">{o.email}</p>
+                            <p className="font-medium text-foreground text-xs">{o.user?.name || o.deliveryDetails?.fullName || 'Customer'}</p>
+                            <p className="text-[10px] text-muted-foreground">{o.user?.email || o.deliveryDetails?.phone || '-'}</p>
                           </td>
-                          <td className="p-3 font-semibold text-foreground text-xs">₹{o.total}</td>
+                          <td className="p-3 font-semibold text-foreground text-xs">{formatCurrency(o.totalAmount)}</td>
                           <td className="p-3">
-                            <span className={`text-[10px] font-semibold px-2 py-1 rounded-full capitalize ${statusColors[o.status]}`}>{o.status}</span>
+                            <span className={`text-[10px] font-semibold px-2 py-1 rounded-full capitalize ${statusColors[o.orderStatus]}`}>{o.orderStatus}</span>
                           </td>
-                          <td className="p-3 text-muted-foreground text-xs">{o.date}</td>
+                          <td className="p-3 text-muted-foreground text-xs">{formatDate(o.createdAt)}</td>
                         </tr>
                       ))}
+                      {!isLoadingAdminData && ordersList.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="p-4 text-center text-xs text-muted-foreground">No orders yet</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -315,8 +381,8 @@ const Admin = () => {
                 <div className="bg-card rounded-2xl border border-border/50 p-5">
                   <h3 className="font-display font-bold text-foreground mb-4">Recent Customers</h3>
                   <div className="space-y-3">
-                    {mockCustomers.slice(0, 4).map((c, i) => (
-                      <div key={i} className="flex items-center gap-3">
+                    {customersList.slice(0, 4).map((c, i) => (
+                      <div key={`${c.email}-${i}`} className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-full bg-accent flex items-center justify-center text-primary font-bold text-xs">
                           {c.name[0]}
                         </div>
@@ -327,6 +393,9 @@ const Admin = () => {
                         <span className="text-xs text-muted-foreground">{c.orders} orders</span>
                       </div>
                     ))}
+                    {!isLoadingAdminData && customersList.length === 0 && (
+                      <p className="text-xs text-muted-foreground">No customers yet</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -472,10 +541,18 @@ const Admin = () => {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
               <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
                 <div className="p-5 border-b border-border flex justify-between items-center">
-                  <p className="text-sm text-muted-foreground">{mockOrders.length} orders</p>
+                  <p className="text-sm text-muted-foreground">{filteredOrders.length} orders</p>
                   <div className="flex gap-2">
-                    {['all', 'pending', 'confirmed', 'shipped', 'delivered'].map(s => (
-                      <button key={s} className="text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:bg-muted capitalize transition-colors">
+                    {ORDER_STATUSES.map(s => (
+                      <button
+                        key={s}
+                        onClick={() => setOrderFilter(s)}
+                        className={`text-xs px-3 py-1.5 rounded-full border capitalize transition-colors ${
+                          orderFilter === s
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border text-muted-foreground hover:bg-muted'
+                        }`}
+                      >
                         {s}
                       </button>
                     ))}
@@ -495,19 +572,19 @@ const Admin = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {mockOrders.map((o) => (
+                      {filteredOrders.map((o) => (
                         <tr key={o.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                          <td className="p-3 font-mono text-xs font-medium text-foreground">{o.id}</td>
+                          <td className="p-3 font-mono text-xs font-medium text-foreground">{o.id.slice(-8).toUpperCase()}</td>
                           <td className="p-3">
-                            <p className="font-medium text-foreground text-xs">{o.customer}</p>
-                            <p className="text-[10px] text-muted-foreground">{o.email}</p>
+                            <p className="font-medium text-foreground text-xs">{o.user?.name || o.deliveryDetails?.fullName || 'Customer'}</p>
+                            <p className="text-[10px] text-muted-foreground">{o.user?.email || o.deliveryDetails?.phone || '-'}</p>
                           </td>
-                          <td className="p-3 text-xs text-foreground">{o.items}</td>
-                          <td className="p-3 font-semibold text-foreground text-xs">₹{o.total}</td>
+                          <td className="p-3 text-xs text-foreground">{o.items.reduce((sum, item) => sum + item.quantity, 0)}</td>
+                          <td className="p-3 font-semibold text-foreground text-xs">{formatCurrency(o.totalAmount)}</td>
                           <td className="p-3">
-                            <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full capitalize ${statusColors[o.status]}`}>{o.status}</span>
+                            <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full capitalize ${statusColors[o.orderStatus]}`}>{o.orderStatus}</span>
                           </td>
-                          <td className="p-3 text-muted-foreground text-xs">{o.date}</td>
+                          <td className="p-3 text-muted-foreground text-xs">{formatDate(o.createdAt)}</td>
                           <td className="p-3">
                             <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-lg">
                               <Eye className="h-3.5 w-3.5" />
@@ -515,6 +592,11 @@ const Admin = () => {
                           </td>
                         </tr>
                       ))}
+                      {!isLoadingAdminData && filteredOrders.length === 0 && (
+                        <tr>
+                          <td colSpan={7} className="p-4 text-center text-xs text-muted-foreground">No orders found for this filter</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -527,7 +609,7 @@ const Admin = () => {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
               <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
                 <div className="p-5 border-b border-border">
-                  <p className="text-sm text-muted-foreground">{mockCustomers.length} customers</p>
+                  <p className="text-sm text-muted-foreground">{customersList.length} customers</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -540,8 +622,8 @@ const Admin = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {mockCustomers.map((c, i) => (
-                        <tr key={i} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                      {customersList.map((c, i) => (
+                        <tr key={`${c.email}-${i}`} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
                           <td className="p-3">
                             <div className="flex items-center gap-3">
                               <div className="h-9 w-9 rounded-full bg-accent flex items-center justify-center text-primary font-bold text-xs">
@@ -554,10 +636,15 @@ const Admin = () => {
                             </div>
                           </td>
                           <td className="p-3 text-foreground text-xs font-medium">{c.orders}</td>
-                          <td className="p-3 font-semibold text-foreground text-xs">₹{c.spent.toLocaleString()}</td>
-                          <td className="p-3 text-muted-foreground text-xs">{c.joined}</td>
+                          <td className="p-3 font-semibold text-foreground text-xs">{formatCurrency(c.spent)}</td>
+                          <td className="p-3 text-muted-foreground text-xs">{formatDate(c.joined)}</td>
                         </tr>
                       ))}
+                      {!isLoadingAdminData && customersList.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="p-4 text-center text-xs text-muted-foreground">No customers yet</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -602,7 +689,7 @@ const Admin = () => {
                   {[
                     { label: 'Store Name', value: BRAND_NAME },
                     { label: 'Email', value: 'admin@maranfarms.com' },
-                    { label: 'Phone', value: '+91 98765 43210' },
+                    { label: 'Phone', value: BRAND_PHONE_DISPLAY },
                     { label: 'Location', value: 'Madurai, Tamil Nadu' },
                   ].map(f => (
                     <div key={f.label}>

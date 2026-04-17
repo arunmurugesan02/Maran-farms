@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { SlidersHorizontal, Grid3X3, LayoutGrid, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useProducts } from '@/hooks/use-products';
+import ProductCardSkeleton from '@/components/ProductCardSkeleton';
 
 const Shop = () => {
   const [searchParams] = useSearchParams();
@@ -164,11 +165,18 @@ const Shop = () => {
 
         {/* Products */}
         <div>
-          {isLoading && <p className="text-sm text-muted-foreground mb-4">Loading products...</p>}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-5">
-            {filtered.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
-          </div>
-          {filtered.length === 0 && (
+          {isLoading ? (
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-5">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <ProductCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-5">
+              {filtered.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
+            </div>
+          )}
+          {!isLoading && filtered.length === 0 && (
             <div className="text-center py-20">
               <p className="text-4xl mb-4">🔍</p>
               <p className="text-lg font-display text-foreground mb-2">No products found</p>

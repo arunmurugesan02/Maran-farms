@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Leaf, Truck, Shield, Heart, Sprout, ArrowRight, Star, Play, ChevronRight } from 'lucide-react';
 import ProductCard from '@/components/ProductCard';
+import ProductCardSkeleton from '@/components/ProductCardSkeleton';
 import { motion } from 'framer-motion';
 import { useProducts } from '@/hooks/use-products';
 
@@ -26,7 +27,7 @@ const testimonials = [
 ];
 
 const Home = () => {
-  const { data: products = [] } = useProducts();
+  const { data: products = [], isLoading } = useProducts();
   const featured = products.slice(0, 4);
 
   return (
@@ -180,7 +181,9 @@ const Home = () => {
             </Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-            {featured.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
+            {isLoading
+              ? Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)
+              : featured.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
           </div>
         </div>
       </section>

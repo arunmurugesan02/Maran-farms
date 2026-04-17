@@ -1,17 +1,18 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { clearToken, getMeApi, loginApi, registerApi, setToken } from "@/lib/api";
+import { clearToken, getMeApi, requestOtpApi, setToken, verifyOtpApi } from "@/lib/api";
 
 interface User {
   id: string;
   name: string;
-  email: string;
+  email?: string;
+  phone?: string;
   isAdmin: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (name: string, email: string, password: string) => Promise<boolean>;
+  requestOtp: (phone: string) => Promise<{ phone: string; expiresIn: number; otp?: string }>;
+  verifyOtp: (phone: string, otp: string, name?: string) => Promise<boolean>;
   logout: () => void;
   isAdmin: boolean;
   isAuthLoading: boolean;
@@ -39,15 +40,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     hydrateUser();
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const { token, user: loggedInUser } = await loginApi({ email, password });
-    setToken(token);
-    setUser(loggedInUser);
-    return true;
+  const requestOtp = useCallback(async (phone: string) => {
+    return requestOtpApi({ phone });
   }, []);
 
-  const register = useCallback(async (name: string, email: string, password: string) => {
-    const { token, user: registeredUser } = await registerApi({ name, email, password });
+  const verifyOtp = useCallback(async (phone: string, otp: string, name?: string) => {
+    const { token, user: registeredUser } = await verifyOtpApi({ phone, otp, name });
     setToken(token);
     setUser(registeredUser);
     return true;
@@ -62,8 +60,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user,
-        login,
-        register,
+        requestOtp,
+        verifyOtp,
         logout,
         isAdmin: user?.isAdmin ?? false,
         isAuthLoading

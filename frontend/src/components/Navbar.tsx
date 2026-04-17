@@ -21,6 +21,9 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  if (isAdminRoute) return null;
+
   const navLinks = [
     { to: '/', label: 'Home' },
     { to: '/shop', label: 'Shop' },
