@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { clearToken, getMeApi, requestOtpApi, setToken, verifyOtpApi } from "@/lib/api";
+import { clearToken, getMeApi, getToken, requestOtpApi, setToken, verifyOtpApi } from "@/lib/api";
 
 interface User {
   id: string;
@@ -26,6 +26,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     async function hydrateUser() {
+      const token = getToken();
+      if (!token) {
+        setIsAuthLoading(false);
+        return;
+      }
+
       try {
         const me = await getMeApi();
         setUser(me);

@@ -1,6 +1,11 @@
 import { Product, Order } from "@/types";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000/api";
+const envApiBaseUrl = import.meta.env.VITE_API_BASE_URL as string | undefined;
+const isLanClient = !["localhost", "127.0.0.1"].includes(window.location.hostname);
+const API_BASE_URL =
+  envApiBaseUrl && !(isLanClient && envApiBaseUrl.includes("localhost"))
+    ? envApiBaseUrl
+    : `http://${window.location.hostname}:4000/api`;
 const TOKEN_KEY = "maran_auth_token";
 
 type ApiEnvelope<T> = {

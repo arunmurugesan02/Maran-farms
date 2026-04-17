@@ -10,7 +10,14 @@ const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: env.frontendUrl,
+    origin: (origin, callback) => {
+      // In development, allow LAN/mobile origins (e.g., http://192.168.x.x:8080).
+      if (env.nodeEnv !== "production") {
+        callback(null, true);
+        return;
+      }
+      callback(null, origin === env.frontendUrl);
+    },
     credentials: true
   })
 );
@@ -23,9 +30,13 @@ app.get("/health", (_req, res) => {
 
 app.use("/api", apiRouter);
 
-app.use((err, _req, res, _next) => {
-  console.error(err);
+app.use((err, req, res, _next) => {
   const statusCode = err.statusCode || 500;
+  if (statusCode >= 500) {
+    console.error(err);
+  } else {
+    console.warn(`${req.method} ${req.originalUrl} ${statusCode} ${err.message}`);
+  }
   res.status(statusCode).json({
     success: false,
     message: err.message || "Internal server error"
