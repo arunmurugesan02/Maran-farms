@@ -324,11 +324,9 @@ export const verifyPayment = asyncHandler(async (req, res) => {
   }
 
   order.paymentStatus = "paid";
-  order.orderStatus = "packed";
   order.razorpayPaymentId = razorpayPaymentId;
   order.razorpaySignature = razorpaySignature;
-  order.statusTimeline.push({ status: "packed", note: "Payment verified and packed" });
-  order.tracking.milestones.push({ label: "Packed", timestamp: new Date() });
+  order.statusTimeline.push({ status: "pending", note: "Payment verified and order placed" });
   order.invoice = {
     invoiceNumber: `INV-${order.orderNumber}`,
     generatedAt: new Date()
@@ -359,7 +357,7 @@ export const verifyPayment = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
-    message: "Payment verified and order packed",
+    message: "Payment verified and order placed",
     data: mapOrder(order)
   });
 });
@@ -381,8 +379,8 @@ export const cancelMyOrder = asyncHandler(async (req, res) => {
 
   const order = await Order.findOne({ _id: req.params.id, user: req.user._id });
   if (!order) throw new ApiError(404, "Order not found");
-  if (order.orderStatus !== "pending") {
-    throw new ApiError(400, "Only pending orders can be cancelled");
+  if (order.orderStatus !== "pending" || order.paymentStatus !== "pending") {
+    throw new ApiError(400, "Only unpaid pending orders can be cancelled");
   }
 
   order.orderStatus = "cancelled";

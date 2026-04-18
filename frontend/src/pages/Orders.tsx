@@ -15,7 +15,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { cancelOrderApi, downloadInvoiceApi, getMyOrdersApi, reorderApi } from "@/lib/api";
 import { useCart } from "@/context/CartContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 
 const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
   pending: { color: "bg-farm-gold/15 text-farm-brown border-farm-gold/30", icon: Clock, label: "Pending" },
@@ -25,12 +25,11 @@ const statusConfig: Record<string, { color: string; icon: any; label: string }> 
   cancelled: { color: "bg-destructive/10 text-destructive border-destructive/20", icon: XCircle, label: "Cancelled" }
 };
 
-const steps = ["pending", "packed", "shipped", "delivered"];
+const progressSteps = ["order_placed", "packed", "shipped", "delivered"] as const;
 
 const Orders = () => {
   const { user } = useAuth();
   const { addToCart } = useCart();
-  const { toast } = useToast();
 
   const {
     data: orders = [],
@@ -47,13 +46,11 @@ const Orders = () => {
     mutationFn: (orderId: string) => cancelOrderApi(orderId),
     onSuccess: () => {
       refetch();
-      toast({ title: "Order cancelled" });
+      toast.success("Order cancelled");
     },
     onError: (error) => {
-      toast({
-        title: "Cancellation failed",
-        description: error instanceof Error ? error.message : "Please try again",
-        variant: "destructive"
+      toast.error("Cancellation failed", {
+        description: error instanceof Error ? error.message : "Please try again"
       });
     }
   });
@@ -68,7 +65,7 @@ const Orders = () => {
       if (matchedOrder) {
         matchedOrder.items.forEach((item) => addToCart(item.product, item.quantity));
       }
-      toast({ title: "Items added to cart" });
+      toast.success("Items added to cart");
     }
   });
 
@@ -82,10 +79,8 @@ const Orders = () => {
       anchor.click();
       URL.revokeObjectURL(url);
     } catch (error) {
-      toast({
-        title: "Invoice unavailable",
-        description: error instanceof Error ? error.message : "Please try again",
-        variant: "destructive"
+      toast.error("Invoice unavailable", {
+        description: error instanceof Error ? error.message : "Please try again"
       });
     }
   };
@@ -135,7 +130,17 @@ const Orders = () => {
         {orders.map((order, i) => {
           const status = statusConfig[order.orderStatus] || statusConfig.pending;
           const StatusIcon = status.icon;
-          const currentIdx = steps.indexOf(order.orderStatus);
+          const shouldShowProgress = order.paymentStatus === "paid" && order.orderStatus !== "cancelled";
+          const progressIdx = (() => {
+            if (!shouldShowProgress) return -1;
+            if (order.orderStatus === "pending") return 0;
+            if (order.orderStatus === "packed") return 1;
+            if (order.orderStatus === "shipped") return 2;
+            if (order.orderStatus === "delivered") return 3;
+            return -1;
+          })();
+          const statusLabel =
+            order.paymentStatus === "paid" && order.orderStatus === "pending" ? "Order Placed" : status.label;
 
           return (
             <motion.div
@@ -163,18 +168,26 @@ const Orders = () => {
                   <div className="flex items-center gap-3">
                     <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${status.color}`}>
                       <StatusIcon className="h-3 w-3" />
-                      {status.label}
+                      {statusLabel}
                     </span>
                     <span className="text-lg font-bold text-foreground">₹{order.totalAmount.toFixed(2)}</span>
                   </div>
                 </div>
 
-                {order.orderStatus !== "cancelled" ? (
-                  <div className="flex items-center gap-1 mb-5">
-                    {steps.map((step, idx) => {
-                      const isCompleted = currentIdx >= 0 && idx <= currentIdx;
-                      return <div key={step} className={`flex-1 h-1.5 rounded-full ${isCompleted ? "bg-primary" : "bg-border"}`} />;
-                    })}
+                {shouldShowProgress ? (
+                  <div className="mb-5">
+                    <div className="flex items-center gap-1">
+                      {progressSteps.map((step, idx) => {
+                        const isCompleted = progressIdx >= 0 && idx <= progressIdx;
+                        return <div key={step} className={`flex-1 h-1.5 rounded-full ${isCompleted ? "bg-primary" : "bg-border"}`} />;
+                      })}
+                    </div>
+                    <div className="mt-2 grid grid-cols-4 gap-1 text-[11px] text-muted-foreground">
+                      <span className={progressIdx >= 0 ? "text-foreground" : ""}>Order Placed</span>
+                      <span className={progressIdx >= 1 ? "text-foreground" : ""}>Packed</span>
+                      <span className={progressIdx >= 2 ? "text-foreground" : ""}>Shipped</span>
+                      <span className={progressIdx >= 3 ? "text-foreground" : ""}>Delivered</span>
+                    </div>
                   </div>
                 ) : null}
 
@@ -205,7 +218,7 @@ const Orders = () => {
                 ) : null}
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {order.orderStatus === "pending" ? (
+                  {order.orderStatus === "pending" && order.paymentStatus !== "paid" ? (
                     <Button
                       size="sm"
                       variant="destructive"

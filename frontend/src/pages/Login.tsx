@@ -3,7 +3,7 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Phone, KeyRound, User, ArrowRight } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 import { motion } from "framer-motion";
 import logo from "@/images/logo.png";
 import { BRAND_NAME } from "@/lib/brand";
@@ -18,7 +18,6 @@ const Login = () => {
   const { requestOtp, verifyOtp, user, isAuthLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { toast } = useToast();
   const fromPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
 
   const sendOtp = async (e: React.FormEvent) => {
@@ -30,15 +29,12 @@ const Login = () => {
       setIsOtpSent(true);
       setExpiresIn(response.expiresIn);
 
-      toast({
-        title: "OTP sent",
+      toast.success("OTP sent", {
         description: response.otp ? `Demo OTP: ${response.otp}` : "Check your phone for OTP"
       });
     } catch (error) {
-      toast({
-        title: "Failed to send OTP",
-        description: error instanceof Error ? error.message : "Please try again",
-        variant: "destructive"
+      toast.error("Failed to send OTP", {
+        description: error instanceof Error ? error.message : "Please try again"
       });
     } finally {
       setIsLoading(false);
@@ -51,16 +47,14 @@ const Login = () => {
 
     try {
       const loggedInUser = await verifyOtp(phone, otp, name || undefined);
-      toast({ title: "Login successful" });
+      toast.success("Login successful");
       const targetPath = loggedInUser.isAdmin
         ? (fromPath?.startsWith("/admin") ? fromPath : "/admin")
         : (fromPath && !fromPath.startsWith("/admin") ? fromPath : "/");
       navigate(targetPath, { replace: true });
     } catch (error) {
-      toast({
-        title: "OTP verification failed",
-        description: error instanceof Error ? error.message : "Please try again",
-        variant: "destructive"
+      toast.error("OTP verification failed", {
+        description: error instanceof Error ? error.message : "Please try again"
       });
     } finally {
       setIsLoading(false);

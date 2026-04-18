@@ -12,7 +12,7 @@ import {
   updateProductApi
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 import {
   BarChart,
   Bar,
@@ -34,7 +34,6 @@ const orderStatusTransitionMap = {
 
 const Admin = () => {
   const { isAdmin, user, logout, isAuthLoading } = useAuth();
-  const { toast } = useToast();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"dashboard" | "products" | "orders">("dashboard");
   const [productForm, setProductForm] = useState({
@@ -89,7 +88,7 @@ const Admin = () => {
         description: "",
         category: "Grass"
       });
-      toast({ title: "Product added" });
+      toast.success("Product added");
     }
   });
 
@@ -98,7 +97,7 @@ const Admin = () => {
       updateProductApi(id, { price, stock, lowStockThreshold }),
     onSuccess: async () => {
       await Promise.all([productsQuery.refetch(), analyticsQuery.refetch()]);
-      toast({ title: "Inventory updated" });
+      toast.success("Inventory updated");
     }
   });
 
@@ -106,7 +105,7 @@ const Admin = () => {
     mutationFn: (id: string) => deleteProductApi(id),
     onSuccess: async () => {
       await productsQuery.refetch();
-      toast({ title: "Product deleted" });
+      toast.success("Product deleted");
     }
   });
 
@@ -114,13 +113,11 @@ const Admin = () => {
     mutationFn: ({ id, status }: { id: string; status: any }) => updateOrderStatusApi(id, { orderStatus: status }),
     onSuccess: async () => {
       await Promise.all([ordersQuery.refetch(), analyticsQuery.refetch()]);
-      toast({ title: "Order status updated" });
+      toast.success("Order status updated");
     },
     onError: (error) => {
-      toast({
-        title: "Unable to update order status",
-        description: error instanceof Error ? error.message : "Please try again",
-        variant: "destructive"
+      toast.error("Unable to update order status", {
+        description: error instanceof Error ? error.message : "Please try again"
       });
     }
   });
@@ -147,7 +144,7 @@ const Admin = () => {
 
   const handleLogout = () => {
     logout();
-    toast({ title: "Logged out", description: "You have safely signed out from admin." });
+    toast.success("Logged out", { description: "You have safely signed out from admin." });
     navigate("/login", { replace: true, state: { from: { pathname: "/admin" } } });
   };
 
