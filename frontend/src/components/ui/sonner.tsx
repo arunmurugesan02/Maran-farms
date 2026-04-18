@@ -18,8 +18,9 @@ type CompatToastInput = {
 };
 
 function renderToastContent(title?: ReactNode, description?: ReactNode) {
-  if (!title && description) return description;
-  if (!description) return title;
+  if (!title && !description) return "";
+  if (!title && description) return <>{description}</>;
+  if (!description) return <>{title}</>;
   return (
     <div className="space-y-1">
       <p className="text-[13px] sm:text-sm font-semibold leading-tight">{title}</p>
