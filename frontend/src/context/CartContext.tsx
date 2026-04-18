@@ -30,7 +30,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return [...prev, { product, quantity }];
     });
-    toast({ title: 'Added to cart', description: `${product.name} × ${quantity}` });
+    toast({
+      title: 'Added to cart',
+      description: `${product.name} × ${quantity}`,
+      image: product.images[0]
+    });
   }, [toast]);
 
   const removeFromCart = useCallback((productId: string) => {

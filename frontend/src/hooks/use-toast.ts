@@ -7,6 +7,7 @@ type ToastInput = {
   title?: ReactNode;
   description?: ReactNode;
   variant?: ToastVariant;
+  image?: string | { src: string; alt?: string };
   duration?: number;
   id?: string;
 };
