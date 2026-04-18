@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, X, ShoppingBag, Shield, ArrowLeft, Truck, TicketPercent } from "lucide-react";
@@ -7,6 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { validateCouponApi } from "@/lib/api";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 
 function getItemSavings(item: { product: any; quantity: number }) {
   const tiers = [...(item.product.bulkPricingTiers || [])].sort((a, b) => a.minQty - b.minQty);
@@ -21,6 +22,8 @@ function getItemSavings(item: { product: any; quantity: number }) {
 
 const Cart = () => {
   const { items, removeFromCart, updateQuantity, totalAmount } = useCart();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [couponCode, setCouponCode] = useState("");
   const [couponInfo, setCouponInfo] = useState<any | null>(null);
   const { toast } = useToast();
@@ -188,11 +191,19 @@ const Cart = () => {
               <span>Total</span>
               <span>₹{(totalAmount - totalSavings + deliveryCharge).toFixed(2)}</span>
             </div>
-            <Link to="/checkout" className="block">
-              <Button className="w-full h-12 rounded-xl font-semibold text-base shine" size="lg">
+            <Button
+              className="w-full h-12 rounded-xl font-semibold text-base shine"
+              size="lg"
+              onClick={() => {
+                if (!user) {
+                  navigate("/login", { state: { from: { pathname: "/checkout" } } });
+                  return;
+                }
+                navigate("/checkout");
+              }}
+            >
                 Proceed to Checkout
-              </Button>
-            </Link>
+            </Button>
             <p className="text-xs text-muted-foreground flex items-center gap-1.5 justify-center">
               <Shield className="h-3.5 w-3.5" /> Secure checkout · 100% safe payments
             </p>

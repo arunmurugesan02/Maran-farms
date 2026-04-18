@@ -26,7 +26,7 @@ const orderSchema = new mongoose.Schema(
     deliveryCharge: { type: Number, required: true, default: 0 },
     totalAmount: { type: Number, required: true },
     deliveryType: { type: String, enum: ["delivery", "pickup"], required: true },
-    deliverySlot: { type: String, enum: ["morning", "evening"], default: "morning" },
+    deliverySlot: { type: String, enum: ["morning", "afternoon", "evening"] },
     paymentStatus: {
       type: String,
       enum: ["pending", "paid", "failed"],

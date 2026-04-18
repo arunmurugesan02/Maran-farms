@@ -5,6 +5,7 @@ import { Review } from "../models/Review.js";
 import { Order } from "../models/Order.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js";
+import { buildCloudinarySignature } from "../utils/cloudinary.js";
 
 const createProductSchema = z.object({
   legacyId: z.string().optional(),
@@ -118,6 +119,11 @@ const reviewSchema = z.object({
   comment: z.string().trim().max(1200).optional().default("")
 });
 
+const uploadSignatureSchema = z.object({
+  folder: z.string().trim().max(120).optional(),
+  resourceType: z.enum(["image", "video"]).optional()
+});
+
 export const createReview = asyncHandler(async (req, res) => {
   const parsed = reviewSchema.safeParse(req.body);
   if (!parsed.success) throw new ApiError(400, parsed.error.issues[0].message);
@@ -156,4 +162,19 @@ export const createReview = asyncHandler(async (req, res) => {
   await product.save();
 
   res.status(201).json({ success: true, data: review });
+});
+
+export const createMediaUploadSignature = asyncHandler(async (req, res) => {
+  const parsed = uploadSignatureSchema.safeParse(req.body || {});
+  if (!parsed.success) throw new ApiError(400, parsed.error.issues[0].message);
+
+  const data = buildCloudinarySignature({
+    folder: parsed.data.folder,
+    resourceType: parsed.data.resourceType
+  });
+
+  res.json({
+    success: true,
+    data
+  });
 });

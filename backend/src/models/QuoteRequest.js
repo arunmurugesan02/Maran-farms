@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const quoteItemSchema = new mongoose.Schema(
   {
-    product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+    product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
     productName: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
     note: { type: String, default: "" }
@@ -12,7 +12,7 @@ const quoteItemSchema = new mongoose.Schema(
 
 const quoteRequestSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     items: { type: [quoteItemSchema], required: true },
     contactName: { type: String, required: true },
     phone: { type: String, required: true },

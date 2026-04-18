@@ -4,6 +4,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js";
 import { signToken } from "../utils/jwt.js";
 import { env } from "../config/env.js";
+import { sendOtpViaTwilio, verifyOtpViaTwilio } from "../utils/twilioVerify.js";
 
 const registerSchema = z.object({
   name: z.string().trim().min(2),
@@ -17,13 +18,13 @@ const loginSchema = z.object({
 });
 
 const phoneSchema = z.object({
-  phone: z.string().trim().min(10)
+  phone: z.string().trim().regex(/^\d{10}$/, "Enter a valid 10-digit phone number")
 });
 
 const verifyOtpSchema = z.object({
-  phone: z.string().trim().min(10),
+  phone: z.string().trim().regex(/^\d{10}$/, "Enter a valid 10-digit phone number"),
   otp: z.string().trim().regex(/^\d{6}$/),
-  name: z.string().trim().min(2).max(80).optional()
+  name: z.string().trim().min(2).max(80)
 });
 const updateProfileSchema = z.object({
   name: z.string().trim().min(2).max(80).optional(),
@@ -38,19 +39,14 @@ const addressSchema = z.object({
 });
 
 const OTP_EXPIRY_MS = 5 * 60 * 1000;
-const RESEND_COOLDOWN_MS = 30 * 1000;
-const otpStore = new Map();
+const RESEND_COOLDOWN_MS = 60 * 1000;
+const otpCooldownStore = new Map();
 
 function normalizePhone(phone) {
   const digits = phone.replace(/\D/g, "");
 
   if (digits.length === 10) return `91${digits}`;
-  if (digits.length === 12 && digits.startsWith("91")) return digits;
   throw new ApiError(400, "Enter a valid Indian phone number");
-}
-
-function generateOtp() {
-  return String(Math.floor(100000 + Math.random() * 900000));
 }
 
 function responseUser(user) {
@@ -187,29 +183,23 @@ export const requestOtp = asyncHandler(async (req, res) => {
 
   const normalizedPhone = normalizePhone(parsed.data.phone);
   const now = Date.now();
-  const existing = otpStore.get(normalizedPhone);
+  const existing = otpCooldownStore.get(normalizedPhone);
   if (existing?.cooldownUntil && existing.cooldownUntil > now) {
-    throw new ApiError(429, "Please wait before requesting OTP again");
+    const secondsLeft = Math.ceil((existing.cooldownUntil - now) / 1000);
+    throw new ApiError(429, `Please wait ${secondsLeft} seconds before requesting OTP again`);
   }
 
-  const otp = generateOtp();
-  const expiresAt = now + OTP_EXPIRY_MS;
   const cooldownUntil = now + RESEND_COOLDOWN_MS;
 
-  otpStore.set(normalizedPhone, {
-    otp,
-    expiresAt,
-    cooldownUntil
-  });
-
-  console.log(`OTP for ${normalizedPhone}: ${otp}`);
+  await sendOtpViaTwilio({ phone: `+${normalizedPhone}` });
+  otpCooldownStore.set(normalizedPhone, { cooldownUntil });
 
   res.json({
     success: true,
     data: {
       phone: normalizedPhone,
       expiresIn: Math.floor(OTP_EXPIRY_MS / 1000),
-      ...(env.nodeEnv !== "production" ? { otp } : {})
+      cooldownSeconds: Math.floor(RESEND_COOLDOWN_MS / 1000)
     }
   });
 });
@@ -220,29 +210,19 @@ export const verifyOtp = asyncHandler(async (req, res) => {
 
   const normalizedPhone = normalizePhone(parsed.data.phone);
   const isAdminPhone = normalizedPhone === env.adminPhone;
-  const otpData = otpStore.get(normalizedPhone);
-
-  if (!otpData) throw new ApiError(400, "OTP not requested for this number");
-  if (Date.now() > otpData.expiresAt) {
-    otpStore.delete(normalizedPhone);
-    throw new ApiError(400, "OTP expired. Request a new one");
-  }
-  if (otpData.otp !== parsed.data.otp) throw new ApiError(400, "Invalid OTP");
-
-  otpStore.delete(normalizedPhone);
+  await verifyOtpViaTwilio({ phone: `+${normalizedPhone}`, otp: parsed.data.otp });
 
   let user = await User.findOne({ phone: normalizedPhone });
 
   if (!user) {
-    const fallbackName = `Customer ${normalizedPhone.slice(-4)}`;
     user = await User.create({
-      name: parsed.data.name?.trim() || fallbackName,
+      name: parsed.data.name.trim(),
       phone: normalizedPhone,
       isAdmin: isAdminPhone
     });
   } else {
     let didUpdate = false;
-    if (parsed.data.name && user.name !== parsed.data.name.trim()) {
+    if (user.name !== parsed.data.name.trim()) {
       user.name = parsed.data.name.trim();
       didUpdate = true;
     }

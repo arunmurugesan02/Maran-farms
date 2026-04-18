@@ -4,7 +4,7 @@ import { User } from "@/types";
 
 interface AuthContextType {
   user: User | null;
-  requestOtp: (phone: string) => Promise<{ phone: string; expiresIn: number; otp?: string }>;
+  requestOtp: (phone: string) => Promise<{ phone: string; expiresIn: number; cooldownSeconds: number }>;
   verifyOtp: (phone: string, otp: string, name?: string) => Promise<User>;
   logout: () => void;
   isAdmin: boolean;

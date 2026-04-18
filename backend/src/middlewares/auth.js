@@ -28,3 +28,22 @@ export function requireAdmin(req, _res, next) {
   }
   return next();
 }
+
+export async function optionalAuth(req, _res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    return next();
+  }
+
+  const token = authHeader.split(" ")[1];
+  try {
+    const payload = verifyToken(token);
+    const user = await User.findById(payload.userId).select("-password");
+    if (user) {
+      req.user = user;
+    }
+  } catch (_error) {
+    // intentionally ignore invalid auth for optional auth flow
+  }
+  return next();
+}

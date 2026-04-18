@@ -13,7 +13,7 @@ const ProductCard = ({ product, index = 0 }: { product: Product; index?: number 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.4 }}
-      className="group bg-card rounded-2xl border border-border/60 overflow-hidden hover-lift"
+      className="group bg-card rounded-2xl border border-border/60 overflow-hidden hover-lift h-full flex flex-col"
     >
       <Link to={`/product/${product.id}`} className="block relative">
         <div className="aspect-[4/3] overflow-hidden bg-muted">
@@ -47,10 +47,10 @@ const ProductCard = ({ product, index = 0 }: { product: Product; index?: number 
         )}
       </Link>
 
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-3 flex-1 flex flex-col">
         <div>
           <Link to={`/product/${product.id}`}>
-            <h3 className="font-display font-semibold text-foreground group-hover:text-primary transition-colors text-base leading-tight">
+            <h3 className="font-display font-semibold text-foreground group-hover:text-primary transition-colors text-base leading-tight min-h-[2.5rem]">
               {product.name}
             </h3>
           </Link>
@@ -70,7 +70,7 @@ const ProductCard = ({ product, index = 0 }: { product: Product; index?: number 
           </div>
         </div>
 
-        <div className="flex items-end justify-between">
+        <div className="flex items-end justify-between mt-auto">
           <div>
             <span className="text-xl font-bold text-primary">₹{product.price}</span>
             <span className="text-xs text-muted-foreground ml-1">/{product.unit}</span>

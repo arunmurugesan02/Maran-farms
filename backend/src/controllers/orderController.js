@@ -29,7 +29,6 @@ const checkoutSchema = z.object({
     )
     .min(1),
   deliveryType: z.enum(["delivery", "pickup"]),
-  deliverySlot: z.enum(["morning", "evening"]).optional().default("morning"),
   couponCode: z.string().trim().toUpperCase().optional(),
   idempotencyKey: z.string().trim().min(6),
   deliveryDetails: z.object({
@@ -65,7 +64,8 @@ const quoteSchema = z.object({
   items: z
     .array(
       z.object({
-        productId: z.string().min(1),
+        productId: z.string().min(1).optional(),
+        productName: z.string().trim().min(2).optional(),
         quantity: z.number().int().positive(),
         note: z.string().trim().max(300).optional().default("")
       })
@@ -79,8 +79,8 @@ const quoteSchema = z.object({
 
 const transitionMap = {
   pending: ["packed", "cancelled"],
-  packed: ["shipped"],
-  shipped: ["delivered"],
+  packed: ["shipped", "cancelled"],
+  shipped: ["delivered", "cancelled"],
   delivered: [],
   cancelled: []
 };
@@ -211,7 +211,7 @@ export const createCheckoutOrder = asyncHandler(async (req, res) => {
     });
   }
 
-  const { items, deliveryType, deliverySlot, deliveryDetails, couponCode } = parsed.data;
+  const { items, deliveryType, deliveryDetails, couponCode } = parsed.data;
 
   const duplicateCutoff = new Date(Date.now() - 90 * 1000);
   const duplicateOrder = await Order.findOne({
@@ -243,7 +243,6 @@ export const createCheckoutOrder = asyncHandler(async (req, res) => {
     deliveryCharge,
     totalAmount,
     deliveryType,
-    deliverySlot,
     paymentStatus: "pending",
     orderStatus: "pending",
     statusTimeline: [{ status: "pending", note: "Order created" }],
@@ -528,30 +527,52 @@ export const createQuoteRequest = asyncHandler(async (req, res) => {
 
   const normalizedItems = [];
   for (const item of parsed.data.items) {
-    const product = await findProductByIdentifier(item.productId);
-    if (!product) throw new ApiError(400, "Invalid product in quote request");
+    if (item.productId) {
+      const product = await findProductByIdentifier(item.productId);
+      if (!product) throw new ApiError(400, "Invalid product in quote request");
+      if (product.type === "grass" && item.quantity < 500) {
+        throw new ApiError(400, `${product.name} minimum quote quantity is 500`);
+      }
+
+      normalizedItems.push({
+        product: product._id,
+        productName: product.name,
+        quantity: item.quantity,
+        note: item.note || ""
+      });
+      continue;
+    }
+
+    if (!item.productName) {
+      throw new ApiError(400, "Product name is required for custom enquiry");
+    }
 
     normalizedItems.push({
-      product: product._id,
-      productName: product.name,
+      productName: item.productName,
       quantity: item.quantity,
       note: item.note || ""
     });
   }
 
-  const quote = await QuoteRequest.create({
-    user: req.user._id,
+  const payload = {
     items: normalizedItems,
     contactName: parsed.data.contactName,
     phone: parsed.data.phone,
     address: parsed.data.address,
     message: parsed.data.message
-  });
+  };
+
+  if (req.user?._id) {
+    payload.user = req.user._id;
+  }
+
+  const quote = await QuoteRequest.create(payload);
 
   res.status(201).json({ success: true, data: quote });
 });
 
 export const listMyQuoteRequests = asyncHandler(async (req, res) => {
+  if (!req.user?._id) throw new ApiError(401, "Unauthorized");
   const quotes = await QuoteRequest.find({ user: req.user._id }).sort({ createdAt: -1 });
   res.json({ success: true, data: quotes });
 });

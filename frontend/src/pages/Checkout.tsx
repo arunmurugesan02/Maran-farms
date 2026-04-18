@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { useOrders } from "@/context/OrderContext";
 import { useAuth } from "@/context/AuthContext";
@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { createCheckoutOrderApi, getMeApi } from "@/lib/api";
 import { BRAND_NAME } from "@/lib/brand";
+import { STORAGE_KEYS } from "@/lib/storage";
 
 declare global {
   interface Window {
@@ -25,6 +26,7 @@ const Checkout = () => {
   const { fetchOrders } = useOrders();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [isPaying, setIsPaying] = useState(false);
   const [couponCode, setCouponCode] = useState("");
@@ -35,8 +37,7 @@ const Checkout = () => {
     phone: "",
     address: "",
     pincode: "",
-    deliveryType: "delivery",
-    deliverySlot: "morning"
+    deliveryType: "delivery"
   });
 
   const deliveryCharge = totalAmount > 500 || form.deliveryType === "pickup" ? 0 : 40;
@@ -46,29 +47,78 @@ const Checkout = () => {
   }, [items.length, navigate]);
 
   useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.checkoutDraft);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        couponCode?: string;
+        selectedAddressId?: string;
+        form?: typeof form;
+      };
+      if (parsed.form) {
+        setForm((prev) => ({ ...prev, ...parsed.form }));
+      }
+      if (parsed.couponCode) {
+        setCouponCode(parsed.couponCode);
+      }
+      if (parsed.selectedAddressId) {
+        setSelectedAddressId(parsed.selectedAddressId);
+      }
+    } catch (_error) {
+      // ignore invalid local draft
+    }
+  }, []);
+
+  useEffect(() => {
     if (!user) return;
 
     let mounted = true;
-    getMeApi().then((me) => {
-      if (!mounted) return;
-      setAddresses(me.addresses || []);
-      const defaultAddress = (me.addresses || []).find((item) => item.isDefault);
-      if (defaultAddress) {
-        setSelectedAddressId(defaultAddress._id);
+    getMeApi()
+      .then((me) => {
+        if (!mounted) return;
+        setAddresses(me.addresses || []);
+        const defaultAddress = (me.addresses || []).find((item) => item.isDefault);
+        if (defaultAddress) {
+          setSelectedAddressId(defaultAddress._id);
+          setForm((prev) => ({
+            ...prev,
+            fullName: prev.fullName || defaultAddress.fullName || me.name || "",
+            phone: prev.phone || defaultAddress.phone || me.phone || "",
+            address: prev.address || defaultAddress.address || "",
+            pincode: prev.pincode || defaultAddress.pincode || ""
+          }));
+        } else {
+          setForm((prev) => ({
+            ...prev,
+            fullName: prev.fullName || me.name || "",
+            phone: prev.phone || me.phone || ""
+          }));
+        }
+      })
+      .catch(() => {
+        if (!mounted) return;
         setForm((prev) => ({
           ...prev,
-          fullName: defaultAddress.fullName,
-          phone: defaultAddress.phone,
-          address: defaultAddress.address,
-          pincode: defaultAddress.pincode
+          fullName: prev.fullName || user.name || "",
+          phone: prev.phone || user.phone || ""
         }));
-      }
-    });
+      });
 
     return () => {
       mounted = false;
     };
   }, [user]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      STORAGE_KEYS.checkoutDraft,
+      JSON.stringify({
+        form,
+        couponCode,
+        selectedAddressId
+      })
+    );
+  }, [couponCode, form, selectedAddressId]);
 
   const appliedDiscount = useMemo(() => 0, []);
 
@@ -89,12 +139,16 @@ const Checkout = () => {
   const handlePay = async () => {
     if (!user) {
       toast({ title: "Please login to continue", variant: "destructive" });
-      navigate("/login");
+      navigate("/login", { state: { from: { pathname: location.pathname } } });
       return;
     }
 
     if (!form.fullName || !form.phone || !form.address || !form.pincode) {
       toast({ title: "Please fill all delivery details", variant: "destructive" });
+      return;
+    }
+    if (form.phone.length !== 10) {
+      toast({ title: "Enter valid 10-digit phone number", variant: "destructive" });
       return;
     }
 
@@ -109,7 +163,6 @@ const Checkout = () => {
       const checkout = await createCheckoutOrderApi({
         items: items.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
         deliveryType: form.deliveryType as "delivery" | "pickup",
-        deliverySlot: form.deliverySlot as "morning" | "evening",
         couponCode: couponCode.trim() || undefined,
         idempotencyKey: createIdempotencyKey(),
         deliveryDetails: {
@@ -151,6 +204,7 @@ const Checkout = () => {
             });
 
             clearCart();
+            localStorage.removeItem(STORAGE_KEYS.checkoutDraft);
             await fetchOrders();
             toast({ title: "Order placed successfully", description: "Payment verified via Razorpay" });
             navigate("/orders");
@@ -233,7 +287,15 @@ const Checkout = () => {
                     type={f.type}
                     placeholder={f.placeholder}
                     value={form[f.key as keyof typeof form]}
-                    onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        [f.key]:
+                          f.key === "phone"
+                            ? e.target.value.replace(/\D/g, "").slice(0, 10)
+                            : e.target.value
+                      }))
+                    }
                     className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-background text-foreground"
                   />
                 </div>
@@ -255,7 +317,7 @@ const Checkout = () => {
                   type="text"
                   placeholder="625001"
                   value={form.pincode}
-                  onChange={(e) => setForm((p) => ({ ...p, pincode: e.target.value }))}
+                  onChange={(e) => setForm((p) => ({ ...p, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
                   className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-background text-foreground"
                 />
               </div>
@@ -276,24 +338,6 @@ const Checkout = () => {
                     </button>
                   ))}
                 </div>
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Delivery Slot</label>
-              <div className="flex gap-3 mt-1">
-                {["morning", "evening"].map((slot) => (
-                  <button
-                    key={slot}
-                    onClick={() => setForm((p) => ({ ...p, deliverySlot: slot }))}
-                    className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all ${
-                      form.deliverySlot === slot
-                        ? "border-primary bg-accent text-primary"
-                        : "border-border text-muted-foreground"
-                    }`}
-                  >
-                    {slot.charAt(0).toUpperCase() + slot.slice(1)}
-                  </button>
-                ))}
               </div>
             </div>
             <div>

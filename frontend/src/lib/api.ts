@@ -42,7 +42,7 @@ type RawOrder = {
   paymentStatus: Order["paymentStatus"];
   orderStatus: Order["orderStatus"];
   deliveryType: string;
-  deliverySlot?: "morning" | "evening";
+  deliverySlot?: "morning" | "afternoon" | "evening";
   statusTimeline?: Order["statusTimeline"];
   tracking?: Order["tracking"];
   createdAt: string;
@@ -217,7 +217,7 @@ export async function loginApi(input: { email: string; password: string }) {
 }
 
 export async function requestOtpApi(input: { phone: string }) {
-  const result = await request<ApiEnvelope<{ phone: string; expiresIn: number; otp?: string }>>("/auth/request-otp", {
+  const result = await request<ApiEnvelope<{ phone: string; expiresIn: number; cooldownSeconds: number }>>("/auth/request-otp", {
     method: "POST",
     body: JSON.stringify(input)
   });
@@ -334,7 +334,6 @@ export async function getAllOrdersApi() {
 export async function createCheckoutOrderApi(payload: {
   items: Array<{ productId: string; quantity: number }>;
   deliveryType: "delivery" | "pickup";
-  deliverySlot: "morning" | "evening";
   couponCode?: string;
   idempotencyKey: string;
   deliveryDetails: {
@@ -403,7 +402,7 @@ export async function downloadInvoiceApi(orderId: string) {
 }
 
 export async function createQuoteRequestApi(payload: {
-  items: Array<{ productId: string; quantity: number; note?: string }>;
+  items: Array<{ productId?: string; productName?: string; quantity: number; note?: string }>;
   contactName: string;
   phone: string;
   address?: string;
@@ -448,6 +447,24 @@ export async function createProductApi(payload: Partial<Product>) {
     body: JSON.stringify(payload)
   });
   return mapProduct(result.data);
+}
+
+export async function createMediaUploadSignatureApi(payload: { folder?: string; resourceType: "image" | "video" }) {
+  const result = await request<
+    ApiEnvelope<{
+      timestamp: number;
+      folder: string;
+      publicId: string;
+      signature: string;
+      cloudName: string;
+      apiKey: string;
+      resourceType: "image" | "video";
+    }>
+  >("/products/admin/upload-signature", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  return result.data;
 }
 
 export async function updateProductApi(id: string, payload: Partial<Product>) {

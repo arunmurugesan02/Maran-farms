@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { CartItem, Product } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { STORAGE_KEYS } from '@/lib/storage';
 
 interface CartContextType {
   items: CartItem[];
@@ -15,8 +16,21 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.cart);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_error) {
+      return [];
+    }
+  });
   const { toast } = useToast();
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.cart, JSON.stringify(items));
+  }, [items]);
 
   const addToCart = useCallback((product: Product, quantity: number) => {
     if (product.type === 'grass' && quantity < product.minQty) {

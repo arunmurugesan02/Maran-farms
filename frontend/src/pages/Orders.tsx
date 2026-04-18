@@ -16,6 +16,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { cancelOrderApi, downloadInvoiceApi, getMyOrdersApi, reorderApi } from "@/lib/api";
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/components/ui/sonner";
+import { STORAGE_KEYS } from "@/lib/storage";
+import { useEffect } from "react";
 
 const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
   pending: { color: "bg-farm-gold/15 text-farm-brown border-farm-gold/30", icon: Clock, label: "Pending" },
@@ -39,8 +41,23 @@ const Orders = () => {
     queryKey: ["my-orders"],
     queryFn: getMyOrdersApi,
     enabled: Boolean(user),
+    initialData: () => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.orderSnapshots);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_error) {
+        return [];
+      }
+    },
     refetchInterval: () => (document.visibilityState === "visible" ? 8_000 : false)
   });
+
+  useEffect(() => {
+    if (orders.length > 0) {
+      localStorage.setItem(STORAGE_KEYS.orderSnapshots, JSON.stringify(orders.slice(0, 20)));
+    }
+  }, [orders]);
 
   const cancelMutation = useMutation({
     mutationFn: (orderId: string) => cancelOrderApi(orderId),
@@ -161,9 +178,6 @@ const Orders = () => {
                         year: "numeric"
                       })}
                     </p>
-                    {order.deliverySlot ? (
-                      <p className="text-xs text-muted-foreground mt-1">Delivery slot: {order.deliverySlot}</p>
-                    ) : null}
                   </div>
                   <div className="flex items-center gap-3">
                     <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${status.color}`}>

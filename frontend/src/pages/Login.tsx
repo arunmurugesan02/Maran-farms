@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Phone, KeyRound, User, ArrowRight } from "lucide-react";
+import { Phone, KeyRound, User, ArrowRight, RefreshCw } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { motion } from "framer-motion";
 import logo from "@/images/logo.png";
@@ -14,23 +14,38 @@ const Login = () => {
   const [otp, setOtp] = useState("");
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [expiresIn, setExpiresIn] = useState<number | null>(null);
+  const [cooldown, setCooldown] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const { requestOtp, verifyOtp, user, isAuthLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const fromPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
 
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = window.setInterval(() => {
+      setCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [cooldown]);
+
+  const canSendOtp = useMemo(
+    () => phone.length === 10 && name.trim().length >= 2 && cooldown === 0 && !isLoading,
+    [cooldown, isLoading, name, phone]
+  );
+
   const sendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    if (!canSendOtp) return;
 
+    setIsLoading(true);
     try {
       const response = await requestOtp(phone);
       setIsOtpSent(true);
       setExpiresIn(response.expiresIn);
-
+      setCooldown(response.cooldownSeconds || 60);
       toast.success("OTP sent", {
-        description: response.otp ? `Demo OTP: ${response.otp}` : "Check your phone for OTP"
+        description: `Sent to +91 ${phone}`
       });
     } catch (error) {
       toast.error("Failed to send OTP", {
@@ -41,13 +56,36 @@ const Login = () => {
     }
   };
 
+  const handleResendOtp = async () => {
+    if (!canSendOtp) return;
+    setIsLoading(true);
+    try {
+      const response = await requestOtp(phone);
+      setExpiresIn(response.expiresIn);
+      setCooldown(response.cooldownSeconds || 60);
+      setOtp("");
+      toast.success("OTP resent");
+    } catch (error) {
+      toast.error("Unable to resend OTP", {
+        description: error instanceof Error ? error.message : "Please try again"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const submitOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    if (otp.length !== 6) {
+      toast.error("Enter a valid 6-digit OTP");
+      return;
+    }
 
+    setIsLoading(true);
     try {
-      const loggedInUser = await verifyOtp(phone, otp, name || undefined);
+      const loggedInUser = await verifyOtp(phone, otp, name.trim());
       toast.success("Login successful");
+      setOtp("");
       const targetPath = loggedInUser.isAdmin
         ? (fromPath?.startsWith("/admin") ? fromPath : "/admin")
         : (fromPath && !fromPath.startsWith("/admin") ? fromPath : "/");
@@ -93,12 +131,31 @@ const Login = () => {
           <div className="p-8">
             <form onSubmit={isOtpSent ? submitOtp : sendOtp} className="space-y-4">
               <div className="relative">
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Your Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full border border-border rounded-xl pl-10 pr-4 py-3 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  required
+                />
+              </div>
+
+              <div className="relative">
                 <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                   type="tel"
-                  placeholder="+91 6380 261 643"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="10-digit phone number"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    const digits = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 10);
+                    setPhone(digits);
+                  }}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                   className="w-full border border-border rounded-xl pl-10 pr-4 py-3 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   required
                   disabled={isOtpSent}
@@ -106,34 +163,22 @@ const Login = () => {
               </div>
 
               {isOtpSent && (
-                <>
-                  <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <input
-                      type="text"
-                      placeholder="Your name (optional)"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full border border-border rounded-xl pl-10 pr-4 py-3 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                    />
-                  </div>
-                  <div className="relative">
-                    <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={6}
-                      placeholder="Enter 6-digit OTP"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                      className="w-full border border-border rounded-xl pl-10 pr-4 py-3 text-sm bg-background text-foreground tracking-[0.2em] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                      required
-                    />
-                  </div>
-                </>
+                <div className="relative">
+                  <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="Enter 6-digit OTP"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    className="w-full border border-border rounded-xl pl-10 pr-4 py-3 text-sm bg-background text-foreground tracking-[0.2em] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    required
+                  />
+                </div>
               )}
 
-              <Button className="w-full h-12 rounded-xl font-semibold text-base gap-2" type="submit" disabled={isLoading}>
+              <Button className="w-full h-12 rounded-xl font-semibold text-base gap-2" type="submit" disabled={isLoading || (!isOtpSent && !canSendOtp)}>
                 {isOtpSent ? "Verify OTP" : "Send OTP"}
                 <ArrowRight className="h-4 w-4" />
               </Button>
@@ -141,16 +186,29 @@ const Login = () => {
 
             {isOtpSent && (
               <div className="mt-4 text-center space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  OTP valid for {expiresIn ?? 300} seconds.
-                </p>
+                <p className="text-xs text-muted-foreground">OTP valid for {expiresIn ?? 300} seconds.</p>
+                <button
+                  type="button"
+                  className="w-full text-sm text-primary font-semibold hover:underline disabled:opacity-60"
+                  onClick={handleResendOtp}
+                  disabled={cooldown > 0 || isLoading}
+                >
+                  {cooldown > 0 ? `Resend OTP in ${cooldown}s` : (
+                    <span className="inline-flex items-center gap-1">
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Resend OTP
+                    </span>
+                  )}
+                </button>
                 <button
                   type="button"
                   className="text-sm text-primary font-semibold hover:underline"
                   onClick={() => {
                     setIsOtpSent(false);
                     setOtp("");
+                    setCooldown(0);
                   }}
+                  disabled={isLoading}
                 >
                   Change number
                 </button>

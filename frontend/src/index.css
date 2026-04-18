@@ -51,8 +51,16 @@
   * {
     @apply border-border;
   }
+  html, body, #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
   body {
     @apply bg-background text-foreground font-body antialiased;
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: none;
+    touch-action: pan-y;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-display;
@@ -116,4 +124,9 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
+}
+
+.razorpay-container,
+.razorpay-checkout-frame {
+  max-width: 100% !important;
 }

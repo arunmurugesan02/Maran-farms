@@ -82,7 +82,7 @@ export interface Order {
   paymentStatus: "pending" | "paid" | "failed";
   orderStatus: "pending" | "packed" | "shipped" | "delivered" | "cancelled";
   deliveryType: string;
-  deliverySlot?: "morning" | "evening";
+  deliverySlot?: "morning" | "afternoon" | "evening";
   statusTimeline?: OrderTimeline[];
   tracking?: OrderTracking;
   createdAt: string;

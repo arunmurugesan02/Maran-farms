@@ -22,5 +22,12 @@ export const env = {
   sellerAddress: process.env.SELLER_ADDRESS || "Karur, Tamil Nadu",
   sellerPhone: process.env.SELLER_PHONE || "9600267271",
   razorpayKeyId: process.env.RAZORPAY_KEY_ID || "",
-  razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || ""
+  razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || "",
+  twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
+  twilioAuthToken: process.env.TWILIO_AUTH_TOKEN ,
+  twilioVerifyServiceSid: process.env.TWILIO_VERIFY_SERVICE_SID,
+  cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || "",
+  cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || "",
+  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || "",
+  cloudinaryUploadFolder: process.env.CLOUDINARY_UPLOAD_FOLDER || "maran-farms"
 };
