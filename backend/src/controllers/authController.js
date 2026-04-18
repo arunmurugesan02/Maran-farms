@@ -4,7 +4,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js";
 import { signToken } from "../utils/jwt.js";
 import { env } from "../config/env.js";
-import { sendOtpViaTwilio, verifyOtpViaTwilio } from "../utils/twilioVerify.js";
+import { sendOtpViaFast2Sms, verifyOtpViaFast2Sms } from "../utils/fast2smsVerify.js";
 
 const registerSchema = z.object({
   name: z.string().trim().min(2),
@@ -191,7 +191,7 @@ export const requestOtp = asyncHandler(async (req, res) => {
 
   const cooldownUntil = now + RESEND_COOLDOWN_MS;
 
-  await sendOtpViaTwilio({ phone: `+${normalizedPhone}` });
+  await sendOtpViaFast2Sms({ phone: normalizedPhone });
   otpCooldownStore.set(normalizedPhone, { cooldownUntil });
 
   res.json({
@@ -210,7 +210,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
 
   const normalizedPhone = normalizePhone(parsed.data.phone);
   const isAdminPhone = normalizedPhone === env.adminPhone;
-  await verifyOtpViaTwilio({ phone: `+${normalizedPhone}`, otp: parsed.data.otp });
+  await verifyOtpViaFast2Sms({ phone: normalizedPhone, otp: parsed.data.otp });
 
   let user = await User.findOne({ phone: normalizedPhone });
 
