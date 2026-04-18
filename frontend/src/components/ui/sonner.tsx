@@ -65,7 +65,7 @@ const toast = Object.assign(
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <HotToaster
-      position="bottom-center"
+      position="top-center"
       reverseOrder={false}
       gutter={8}
       containerClassName="toaster group"
