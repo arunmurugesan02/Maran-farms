@@ -34,7 +34,7 @@ function renderToastContent(title?: ReactNode, description?: ReactNode, image?: 
   const media = normalizeImage(image);
   if (!title && !description) return "";
   return (
-    <div className="flex items-center gap-2.5 sm:gap-3">
+    <div className="flex items-center gap-2.5 sm:gap-3 w-full">
       {media ? (
         <img
           src={media.src}
@@ -42,7 +42,7 @@ function renderToastContent(title?: ReactNode, description?: ReactNode, image?: 
           className="h-10 w-10 sm:h-11 sm:w-11 rounded-lg object-cover border border-border/70 shrink-0"
         />
       ) : null}
-      <div className={cn("min-w-0", title && description ? "space-y-0.5" : "")}>
+      <div className={cn("min-w-0 flex-1", title && description ? "space-y-0.5" : "")}>
         {title ? <p className="text-[14px] sm:text-[16px] font-semibold leading-tight text-foreground">{title}</p> : null}
         {description ? <p className="text-[12.5px] sm:text-[14px] text-muted-foreground leading-snug">{description}</p> : null}
       </div>
@@ -65,7 +65,7 @@ function buildOptions(options?: CompatToastOptions, variant: ToastVariant = "def
     toasterId: options?.toasterId,
     iconTheme: options?.iconTheme,
     className: cn(
-      "rounded-2xl border bg-background text-foreground shadow-[0_14px_30px_-18px_rgba(0,0,0,0.45)] backdrop-blur px-3.5 py-2.5 sm:px-4 sm:py-3 w-[calc(100vw-2.5rem)] sm:w-[340px]",
+      "rounded-2xl border bg-background text-foreground shadow-[0_14px_30px_-18px_rgba(0,0,0,0.45)] backdrop-blur px-3.5 py-2.5 sm:px-4 sm:py-3 w-fit max-w-[calc(100vw-2.75rem)] sm:w-[340px]",
       destructive ? "border-destructive/35 bg-destructive/[0.03]" : "border-border/70",
       className
     ),
@@ -109,7 +109,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       containerStyle={{ bottom: 16, left: 4, right: 4 }}
       toastOptions={{
         duration: 2000,
-        style: { maxWidth: "340px" }
+        style: { maxWidth: "min(340px, calc(100vw - 2.75rem))" }
       }}
       {...props}
     />
